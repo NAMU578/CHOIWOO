@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KARTSTRIKE — MVP</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  html, body, #root { height: 100%; margin: 0; background: #0b0d12; color: #fff; overflow: hidden; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "three": "https://esm.sh/three@0.160.0",
+    "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.15.19?deps=react@18.3.1,react-dom@18.3.1,three@0.160.0",
+    "@react-three/drei": "https://esm.sh/@react-three/drei@9.99.0?deps=react@18.3.1,react-dom@18.3.1,three@0.160.0,@react-three/fiber@8.15.19",
+    "peerjs": "https://esm.sh/peerjs@1.5.4"
+  }
+}
+</script>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="module">
+import React, { useEffect, useMemo, useRef, useState, Suspense } from "react";
+import { createRoot } from "react-dom/client";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Sky } from "@react-three/drei";
+import * as THREE from "three";
+import Peer from "peerjs";
+
+const h = React.createElement;
+const rand6 = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const initialStats = {
+  maxHp: 100, moveSpeed: 18, turnSpeed: 2.2,
+  fireRate: 3, bulletDmg: 20, ammo: 20,
+};
+
+/* ---------------- Lobby ---------------- */
+function Lobby({ onStart }) {
+  const [mode, setMode] = useState(null);
+  const [roomCode, setRoomCode] = useState("");
+  const [inputCode, setInputCode] = useState("");
+  const [status, setStatus] = useState("대기");
+  const peerRef = useRef(null);
+
+  useEffect(() => () => { if (peerRef.current) peerRef.current.destroy(); }, []);
+
+  const startHost = () => {
+    const code = rand6();
+    setRoomCode(code); setMode("host"); setStatus("피어 초기화 중...");
+    const peer = new Peer("kart-" + code);
+    peerRef.current = peer;
+    peer.on("open", () => setStatus("방 코드 " + code + " — 상대 접속 대기"));
+    peer.on("connection", (conn) => {
+      setStatus("상대 접속됨. 게임 시작!");
+      conn.on("open", () => onStart({ role: "host", conn, code }));
+    });
+    peer.on("error", (e) => setStatus("오류: " + e.type));
+  };
+
+  const startJoin = () => {
+    if (inputCode.trim().length !== 6) { setStatus("6자리 코드를 입력해 주세요."); return; }
+    const code = inputCode.trim().toUpperCase();
+    setMode("join"); setStatus("피어 초기화 중...");
+    const peer = new Peer();
+    peerRef.current = peer;
+    peer.on("open", () => {
+      setStatus("호스트에 연결 중...");
+      const conn = peer.connect("kart-" + code, { reliable: true });
+      conn.on("open", () => { setStatus("연결 성공. 게임 시작!"); onStart({ role: "guest", conn, code }); });
+      conn.on("error", (e) => setStatus("연결 오류: " + (e.message || e.type)));
+    });
+    peer.on("error", (e) => setStatus("오류: " + e.type));
+  };
+
+  return h("div", { className: "min-h-screen flex items-center justify-center relative overflow-hidden" },
+    h("div", { className: "absolute inset-0 opacity-30 pointer-events-none",
+      style: { backgroundImage: "radial-gradient(circle at 20% 20%, rgba(0,255,180,.15), transparent 40%), radial-gradient(circle at 80% 70%, rgba(255,60,60,.12), transparent 40%)" } }),
+    h("div", { className: "relative w-[min(560px,92vw)] rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-8 shadow-2xl" },
+      h("div", { className: "flex items-baseline justify-between mb-6" },
+        h("h1", { className: "text-3xl font-black tracking-widest" },
+          h("span", { className: "text-emerald-400" }, "KART"),
+          h("span", { className: "text-neutral-200" }, "STRIKE")),
+        h("span", { className: "text-xs text-neutral-400 tracking-widest" }, "MVP · v0.1")),
+      h("p", { className: "text-neutral-300 text-sm mb-6 leading-relaxed" },
+        "3D 3인칭 카트 슈팅 데스매치. 상대를 ",
+        h("span", { className: "text-emerald-400 font-bold" }, "10킬"),
+        " 먼저 하면 승리."),
+      h("div", { className: "grid grid-cols-2 gap-3" },
+        h("button", { onClick: startHost, className: "px-4 py-3 rounded-xl bg-emerald-500/20 border border-emerald-400/40 hover:bg-emerald-500/30 font-bold tracking-widest" }, "방 만들기 (HOST)"),
+        h("div", { className: "flex gap-2" },
+          h("input", { value: inputCode, onChange: (e) => setInputCode(e.target.value.toUpperCase()), maxLength: 6, placeholder: "ABC123",
+            className: "flex-1 px-3 py-3 rounded-xl bg-black/40 border border-white/10 text-center tracking-[0.4em] font-bold outline-none focus:border-emerald-400/60" }),
+          h("button", { onClick: startJoin, className: "px-4 py-3 rounded-xl bg-neutral-200/10 border border-white/15 hover:bg-neutral-200/20 font-bold tracking-widest" }, "참여"))),
+      mode === "host" && h("div", { className: "mt-6 p-4 rounded-xl bg-black/40 border border-emerald-400/30" },
+        h("p", { className: "text-xs text-neutral-400 tracking-widest" }, "방 코드"),
+        h("p", { className: "text-3xl font-black tracking-[0.5em] text-emerald-400" }, roomCode)),
+      h("div", { className: "mt-6 text-xs text-neutral-400 border-t border-white/5 pt-4" },
+        "상태: ", h("span", { className: "text-neutral-200" }, status))));
+}
+
+/* ---------------- Kart Mesh ---------------- */
+function KartMesh({ color = "#25e39a" }) {
+  const wheels = [[-1.05,0.35,1],[1.05,0.35,1],[-1.05,0.35,-1],[1.05,0.35,-1]];
+  return h("group", null,
+    h("mesh", { castShadow: true, position: [0, 0.35, 0] },
+      h("boxGeometry", { args: [2, 0.4, 3] }),
+      h("meshStandardMaterial", { color: "#1a1d24", metalness: 0.6, roughness: 0.4 })),
+    h("mesh", { castShadow: true, position: [0, 0.85, -0.2] },
+      h("boxGeometry", { args: [1.2, 0.6, 1.4] }),
+      h("meshStandardMaterial", { color, metalness: 0.7, roughness: 0.3 })),
+    h("mesh", { castShadow: true, position: [0, 0.9, 1.4], rotation: [Math.PI/2, 0, 0] },
+      h("cylinderGeometry", { args: [0.1, 0.1, 1.4, 12] }),
+      h("meshStandardMaterial", { color: "#0a0a0a", metalness: 0.9, roughness: 0.2 })),
+    ...wheels.map((p, i) => h("mesh", { key: i, castShadow: true, position: p, rotation: [0, 0, Math.PI/2] },
+      h("cylinderGeometry", { args: [0.4, 0.4, 0.35, 20] }),
+      h("meshStandardMaterial", { color: "#111", roughness: 0.9 }))));
+}
+
+/* ---------------- Local Kart ---------------- */
+function LocalKart({ netRef, statsRef, hpRef, ammoRef, scoreRef, bulletsRef, speedRef }) {
+  const groupRef = useRef();
+  const velRef = useRef(0);
+  const yawRef = useRef(0);
+  const keys = useRef({});
+  const cooldownRef = useRef(0);
+  const sendAccum = useRef(0);
+  const { camera, gl } = useThree();
+
+  useEffect(() => {
+    const kd = (e) => (keys.current[e.code] = true);
+    const ku = (e) => (keys.current[e.code] = false);
+    window.addEventListener("keydown", kd);
+    window.addEventListener("keyup", ku);
+    const onClick = () => {
+      if (cooldownRef.current > 0) return;
+      if (ammoRef.current <= 0) return;
+      cooldownRef.current = 1 / statsRef.current.fireRate;
+      ammoRef.current -= 1;
+      const dir = new THREE.Vector3(Math.sin(yawRef.current), 0, Math.cos(yawRef.current));
+      const origin = groupRef.current.position.clone()
+        .add(new THREE.Vector3(0, 0.9, 0))
+        .add(dir.clone().multiplyScalar(1.6));
+      bulletsRef.current.push({
+        id: Math.random().toString(36).slice(2),
+        pos: origin.toArray(), dir: dir.toArray(),
+        speed: 60, life: 2.0, owner: "local",
+        dmg: statsRef.current.bulletDmg,
+      });
+      if (netRef.current && netRef.current.open) {
+        netRef.current.send({ t: "shoot", pos: origin.toArray(), dir: dir.toArray() });
+      }
+    };
+    gl.domElement.addEventListener("mousedown", onClick);
+    return () => {
+      window.removeEventListener("keydown", kd);
+      window.removeEventListener("keyup", ku);
+      gl.domElement.removeEventListener("mousedown", onClick);
+    };
+  }, [gl, netRef, statsRef, ammoRef, bulletsRef]);
+
+  useFrame((_, dt) => {
+    const g = groupRef.current;
+    if (!g) return;
+    const stats = statsRef.current;
+    if (keys.current["KeyA"]) yawRef.current += stats.turnSpeed * dt;
+    if (keys.current["KeyD"]) yawRef.current -= stats.turnSpeed * dt;
+    const target = (keys.current["KeyW"] ? 1 : 0) - (keys.current["KeyS"] ? 1 : 0);
+    velRef.current = THREE.MathUtils.lerp(velRef.current, target * stats.moveSpeed, 1 - Math.pow(0.001, dt));
+    g.position.x += Math.sin(yawRef.current) * velRef.current * dt;
+    g.position.z += Math.cos(yawRef.current) * velRef.current * dt;
+    g.position.x = clamp(g.position.x, -95, 95);
+    g.position.z = clamp(g.position.z, -95, 95);
+    g.rotation.y = yawRef.current;
+    speedRef.current = velRef.current;
+
+    const camOffset = new THREE.Vector3(-Math.sin(yawRef.current) * 7, 4.5, -Math.cos(yawRef.current) * 7);
+    camera.position.lerp(g.position.clone().add(camOffset), 1 - Math.pow(0.0001, dt));
+    camera.lookAt(g.position.x + Math.sin(yawRef.current) * 3, g.position.y + 1, g.position.z + Math.cos(yawRef.current) * 3);
+
+    if (cooldownRef.current > 0) cooldownRef.current -= dt;
+
+    sendAccum.current += dt;
+    if (sendAccum.current > 0.05 && netRef.current && netRef.current.open) {
+      sendAccum.current = 0;
+      netRef.current.send({
+        t: "state",
+        pos: [g.position.x, g.position.y, g.position.z],
+        rot: yawRef.current,
+        vel: velRef.current,
+        hp: hpRef.current,
+        score: scoreRef.current,
+      });
+    }
+  });
+
+  return h("group", { ref: groupRef, position: [0, 0, 0] }, h(KartMesh, { color: "#25e39a" }));
+}
+
+/* ---------------- Remote Kart ---------------- */
+function RemoteKart({ remoteRef }) {
+  const groupRef = useRef();
+  useFrame((_, dt) => {
+    const g = groupRef.current;
+    const s = remoteRef.current;
+    if (!g || !s) return;
+    g.position.lerp(new THREE.Vector3(...s.pos), 1 - Math.pow(0.0001, dt));
+    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, s.rot, 1 - Math.pow(0.0001, dt));
+  });
+  return h("group", { ref: groupRef }, h(KartMesh, { color: "#ff4d5e" }));
+}
+
+/* ---------------- Bullets ---------------- */
+function Bullets({ bulletsRef, remoteRef, onHitRemote }) {
+  const [, setTick] = useState(0);
+  useFrame((_, dt) => {
+    const arr = bulletsRef.current;
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const b = arr[i];
+      b.pos[0] += b.dir[0] * b.speed * dt;
+      b.pos[1] += b.dir[1] * b.speed * dt;
+      b.pos[2] += b.dir[2] * b.speed * dt;
+      b.life -= dt;
+      if (b.owner === "local" && remoteRef.current) {
+        const r = remoteRef.current.pos;
+        const dx = b.pos[0] - r[0], dz = b.pos[2] - r[2];
+        if (dx*dx + dz*dz < 1.6*1.6) { onHitRemote(b.dmg); arr.splice(i,1); continue; }
+      }
+      if (b.life <= 0) arr.splice(i, 1);
+    }
+    setTick((t) => (t + 1) % 1000);
+  });
+  return h(React.Fragment, null,
+    bulletsRef.current.map((b) => h("mesh", { key: b.id, position: b.pos },
+      h("sphereGeometry", { args: [0.15, 8, 8] }),
+      h("meshStandardMaterial", {
+        color: b.owner === "local" ? "#25e39a" : "#ff4d5e",
+        emissive: b.owner === "local" ? "#25e39a" : "#ff4d5e",
+        emissiveIntensity: 2 }))));
+}
+
+/* ---------------- Arena ---------------- */
+function Arena() {
+  const obstacles = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < 18; i++) {
+      arr.push({ x: (Math.random()-0.5)*160, z: (Math.random()-0.5)*160, s: 2 + Math.random()*4 });
+    }
+    return arr;
+  }, []);
+  const walls = [[0,100,200,4],[0,-100,200,4],[100,0,4,200],[-100,0,4,200]];
+  return h(React.Fragment, null,
+    h("mesh", { rotation: [-Math.PI/2, 0, 0], receiveShadow: true },
+      h("planeGeometry", { args: [200, 200] }),
+      h("meshStandardMaterial", { color: "#2a2f38", roughness: 0.9 })),
+    h("gridHelper", { args: [200, 40, "#3a4150", "#242a33"], position: [0, 0.01, 0] }),
+    ...obstacles.map((o, i) => h("mesh", { key: "o"+i, castShadow: true, position: [o.x, o.s/2, o.z] },
+      h("boxGeometry", { args: [o.s, o.s, o.s] }),
+      h("meshStandardMaterial", { color: "#3d4551", metalness: 0.4, roughness: 0.6 }))),
+    ...walls.map((w, i) => h("mesh", { key: "w"+i, position: [w[0], 2, w[1]] },
+      h("boxGeometry", { args: [w[2], 4, w[3]] }),
+      h("meshStandardMaterial", { color: "#1f242c", metalness: 0.3, roughness: 0.7 }))));
+}
+
+/* ---------------- HUD ---------------- */
+function HUD({ hp, maxHp, ammo, maxAmmo, speed, myScore, enemyScore, killGoal, winner, roomCode }) {
+  return h("div", { className: "pointer-events-none fixed inset-0 select-none" },
+    h("div", { className: "absolute inset-4 border border-white/10 rounded-2xl" }),
+    h("div", { className: "absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-2 rounded-2xl bg-black/50 backdrop-blur-md border border-white/10" },
+      h("div", { className: "text-emerald-400 font-black tracking-widest" }, "YOU ", h("span", { className: "text-2xl" }, myScore)),
+      h("div", { className: "text-neutral-500 font-black" }, "/ " + killGoal + " /"),
+      h("div", { className: "text-rose-400 font-black tracking-widest" }, h("span", { className: "text-2xl" }, enemyScore), " ENEMY")),
+    roomCode && h("div", { className: "absolute top-4 right-4 px-3 py-1 rounded-lg bg-black/50 border border-white/10 text-xs tracking-widest text-neutral-300" }, "ROOM ", h("span", { className: "text-emerald-400 font-black" }, roomCode)),
+    h("div", { className: "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" },
+      h("div", { className: "w-8 h-8 border border-emerald-400/70 rounded-full" }),
+      h("div", { className: "absolute top-1/2 left-1/2 w-1 h-1 -translate-x-1/2 -translate-y-1/2 bg-emerald-400 rounded-full" })),
+    h("div", { className: "absolute bottom-6 left-6 w-64" },
+      h("p", { className: "text-[10px] tracking-[0.4em] text-neutral-400 mb-1" }, "HULL"),
+      h("div", { className: "h-3 rounded-full bg-black/60 border border-white/10 overflow-hidden" },
+        h("div", { className: "h-full bg-gradient-to-r from-emerald-500 to-emerald-300", style: { width: ((hp/maxHp)*100) + "%" } })),
+      h("p", { className: "text-xs mt-1 text-neutral-300 font-mono" }, Math.max(0, Math.round(hp)) + " / " + maxHp)),
+    h("div", { className: "absolute bottom-6 right-6 w-72 text-right" },
+      h("p", { className: "text-[10px] tracking-[0.4em] text-neutral-400 mb-1" }, "MAGAZINE"),
+      h("div", { className: "flex items-center justify-end gap-1 mb-3" },
+        Array.from({ length: maxAmmo }).map((_, i) => h("div", { key: i, className: "w-2 h-4 rounded-sm " + (i < ammo ? "bg-emerald-400" : "bg-neutral-700") }))),
+      h("p", { className: "text-[10px] tracking-[0.4em] text-neutral-400 mb-1" }, "SPEED"),
+      h("div", { className: "text-3xl font-black font-mono tracking-widest text-emerald-300" },
+        Math.round(Math.abs(speed) * 3.6), " ", h("span", { className: "text-xs text-neutral-500" }, "km/h"))),
+    winner && h("div", { className: "absolute inset-0 flex items-center justify-center bg-black/70" },
+      h("div", { className: "p-10 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-xl text-center" },
+        h("p", { className: "text-neutral-400 tracking-widest mb-2" }, "MATCH END"),
+        h("p", { className: "text-5xl font-black tracking-widest " + (winner === "me" ? "text-emerald-400" : "text-rose-400") },
+          winner === "me" ? "VICTORY" : "DEFEAT"))));
+}
+
+/* ---------------- Scene ---------------- */
+function Scene(props) {
+  return h(React.Fragment, null,
+    h("color", { attach: "background", args: ["#0b0d12"] }),
+    h("fog", { attach: "fog", args: ["#0b0d12", 40, 180] }),
+    h("ambientLight", { intensity: 0.35 }),
+    h("directionalLight", { castShadow: true, position: [30, 50, 20], intensity: 1.1 }),
+    h(Sky, { sunPosition: [100, 20, 100], turbidity: 8, rayleigh: 3 }),
+    h(Arena, null),
+    h(LocalKart, props),
+    h(RemoteKart, { remoteRef: props.remoteRef }),
+    h(Bullets, { bulletsRef: props.bulletsRef, remoteRef: props.remoteRef, onHitRemote: props.onHitRemote }));
+}
+
+/* ---------------- Game ---------------- */
+function Game({ session }) {
+  const netRef = useRef(session.conn);
+  const statsRef = useRef({ ...initialStats });
+  const hpRef = useRef(initialStats.maxHp);
+  const ammoRef = useRef(initialStats.ammo);
+  const scoreRef = useRef(0);
+  const speedRef = useRef(0);
+  const bulletsRef = useRef([]);
+  const remoteRef = useRef({ pos: [0, 0, 10], rot: Math.PI, hp: initialStats.maxHp, score: 0 });
+  const [hud, setHud] = useState({ hp: hpRef.current, ammo: ammoRef.current, speed: 0, myScore: 0, enemyScore: 0, winner: null });
+  const killGoal = 10;
+
+  useEffect(() => {
+    const conn = netRef.current;
+    if (!conn) return;
+    const onData = (msg) => {
+      if (msg.t === "state") {
+        remoteRef.current.pos = msg.pos;
+        remoteRef.current.rot = msg.rot;
+        remoteRef.current.hp = msg.hp;
+        remoteRef.current.score = msg.score;
+      } else if (msg.t === "shoot") {
+        bulletsRef.current.push({ id: Math.random().toString(36).slice(2), pos: [...msg.pos], dir: [...msg.dir], speed: 60, life: 2.0, owner: "remote", dmg: 20 });
+      } else if (msg.t === "hit") {
+        hpRef.current -= msg.dmg;
+        if (hpRef.current <= 0) {
+          hpRef.current = statsRef.current.maxHp;
+          ammoRef.current = statsRef.current.ammo;
+          if (netRef.current && netRef.current.open) netRef.current.send({ t: "death" });
+        }
+      } else if (msg.t === "death") {
+        scoreRef.current += 1;
+      }
+    };
+    conn.on("data", onData);
+    return () => { if (conn.off) conn.off("data", onData); };
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (ammoRef.current < statsRef.current.ammo) {
+        ammoRef.current = Math.min(statsRef.current.ammo, ammoRef.current + 0.5);
+      }
+      let winner = null;
+      if (scoreRef.current >= killGoal) winner = "me";
+      else if (remoteRef.current.score >= killGoal) winner = "enemy";
+      setHud({
+        hp: hpRef.current,
+        ammo: Math.floor(ammoRef.current),
+        speed: speedRef.current,
+        myScore: scoreRef.current,
+        enemyScore: remoteRef.current.score,
+        winner,
+      });
+    }, 100);
+    return () => clearInterval(id);
+  }, []);
+
+  const onHitRemote = (dmg) => {
+    if (netRef.current && netRef.current.open) netRef.current.send({ t: "hit", dmg });
+  };
+
+  return h("div", { className: "w-screen h-screen bg-black text-white" },
+    h(Canvas, { shadows: true, camera: { position: [0, 6, -10], fov: 70 } },
+      h(Suspense, { fallback: null },
+        h(Scene, { netRef, remoteRef, hpRef, ammoRef, scoreRef, statsRef, bulletsRef, speedRef, onHitRemote }))),
+    h(HUD, {
+      hp: hud.hp, maxHp: statsRef.current.maxHp,
+      ammo: hud.ammo, maxAmmo: initialStats.ammo,
+      speed: hud.speed, myScore: hud.myScore, enemyScore: hud.enemyScore,
+      killGoal, winner: hud.winner, roomCode: session.code,
+    }));
+}
+
+/* ---------------- App ---------------- */
+function App() {
+  const [session, setSession] = useState(null);
+  return session ? h(Game, { session }) : h(Lobby, { onStart: setSession });
+}
+
+createRoot(document.getElementById("root")).render(h(App));
+</script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
