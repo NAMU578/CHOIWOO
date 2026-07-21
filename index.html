@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -43,6 +44,16 @@ const initialStats = {
   fireRate: 3, bulletDmg: 20, ammo: 20,
 };
 
+// 디버그 로그 전역 (화면 좌상단에 표시)
+const debugLog = { lines: [], listeners: new Set() };
+function log(msg) {
+  const line = "[" + new Date().toLocaleTimeString() + "] " + msg;
+  debugLog.lines.unshift(line);
+  if (debugLog.lines.length > 6) debugLog.lines.pop();
+  debugLog.listeners.forEach((fn) => fn([...debugLog.lines]));
+  console.log(line);
+}
+
 /* ---------------- Lobby ---------------- */
 function Lobby({ onStart }) {
   const [mode, setMode] = useState(null);
@@ -60,8 +71,12 @@ function Lobby({ onStart }) {
     peerRef.current = peer;
     peer.on("open", () => setStatus("방 코드 " + code + " — 상대 접속 대기"));
     peer.on("connection", (conn) => {
-      setStatus("상대 접속됨. 게임 시작!");
-      conn.on("open", () => onStart({ role: "host", conn, code }));
+      setStatus("상대 접속 중...");
+      conn.on("open", () => {
+        setStatus("연결 완료. 게임 시작!");
+        log("HOST: guest 연결됨");
+        onStart({ role: "host", conn, code, peer });
+      });
     });
     peer.on("error", (e) => setStatus("오류: " + e.type));
   };
@@ -75,7 +90,11 @@ function Lobby({ onStart }) {
     peer.on("open", () => {
       setStatus("호스트에 연결 중...");
       const conn = peer.connect("kart-" + code, { reliable: true });
-      conn.on("open", () => { setStatus("연결 성공. 게임 시작!"); onStart({ role: "guest", conn, code }); });
+      conn.on("open", () => {
+        setStatus("연결 성공. 게임 시작!");
+        log("GUEST: host 연결됨");
+        onStart({ role: "guest", conn, code, peer });
+      });
       conn.on("error", (e) => setStatus("연결 오류: " + (e.message || e.type)));
     });
     peer.on("error", (e) => setStatus("오류: " + e.type));
@@ -89,7 +108,7 @@ function Lobby({ onStart }) {
         h("h1", { className: "text-3xl font-black tracking-widest" },
           h("span", { className: "text-emerald-400" }, "KART"),
           h("span", { className: "text-neutral-200" }, "STRIKE")),
-        h("span", { className: "text-xs text-neutral-400 tracking-widest" }, "MVP · v0.1")),
+        h("span", { className: "text-xs text-neutral-400 tracking-widest" }, "MVP · v0.2")),
       h("p", { className: "text-neutral-300 text-sm mb-6 leading-relaxed" },
         "3D 3인칭 카트 슈팅 데스매치. 상대를 ",
         h("span", { className: "text-emerald-400 font-bold" }, "10킬"),
@@ -126,16 +145,20 @@ function KartMesh({ color = "#25e39a" }) {
 }
 
 /* ---------------- Local Kart ---------------- */
-function LocalKart({ netRef, statsRef, hpRef, ammoRef, scoreRef, bulletsRef, speedRef }) {
+function LocalKart({ netRef, statsRef, hpRef, ammoRef, scoreRef, bulletsRef, speedRef, spawnPos }) {
   const groupRef = useRef();
   const velRef = useRef(0);
-  const yawRef = useRef(0);
+  const yawRef = useRef(spawnPos[3] || 0);
   const keys = useRef({});
   const cooldownRef = useRef(0);
   const sendAccum = useRef(0);
   const { camera, gl } = useThree();
 
   useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
+      groupRef.current.rotation.y = yawRef.current;
+    }
     const kd = (e) => (keys.current[e.code] = true);
     const ku = (e) => (keys.current[e.code] = false);
     window.addEventListener("keydown", kd);
@@ -202,7 +225,7 @@ function LocalKart({ netRef, statsRef, hpRef, ammoRef, scoreRef, bulletsRef, spe
     }
   });
 
-  return h("group", { ref: groupRef, position: [0, 0, 0] }, h(KartMesh, { color: "#25e39a" }));
+  return h("group", { ref: groupRef }, h(KartMesh, { color: "#25e39a" }));
 }
 
 /* ---------------- Remote Kart ---------------- */
@@ -251,8 +274,11 @@ function Bullets({ bulletsRef, remoteRef, onHitRemote }) {
 function Arena() {
   const obstacles = useMemo(() => {
     const arr = [];
+    // seed 고정으로 host/guest 장애물이 같게 보이도록
+    let s = 12345;
+    const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
     for (let i = 0; i < 18; i++) {
-      arr.push({ x: (Math.random()-0.5)*160, z: (Math.random()-0.5)*160, s: 2 + Math.random()*4 });
+      arr.push({ x: (rnd()-0.5)*160, z: (rnd()-0.5)*160, s: 2 + rnd()*4 });
     }
     return arr;
   }, []);
@@ -268,6 +294,20 @@ function Arena() {
     ...walls.map((w, i) => h("mesh", { key: "w"+i, position: [w[0], 2, w[1]] },
       h("boxGeometry", { args: [w[2], 4, w[3]] }),
       h("meshStandardMaterial", { color: "#1f242c", metalness: 0.3, roughness: 0.7 }))));
+}
+
+/* ---------------- DebugPanel ---------------- */
+function DebugPanel({ role, packetsIn, packetsOut }) {
+  const [lines, setLines] = useState([...debugLog.lines]);
+  useEffect(() => {
+    const fn = (l) => setLines(l);
+    debugLog.listeners.add(fn);
+    return () => debugLog.listeners.delete(fn);
+  }, []);
+  return h("div", { className: "absolute top-4 left-4 pointer-events-none text-[10px] font-mono bg-black/50 border border-white/10 rounded-lg px-3 py-2 max-w-xs" },
+    h("div", { className: "text-emerald-400 font-bold tracking-widest mb-1" },
+      "NET [" + role.toUpperCase() + "] ▲" + packetsOut + " ▼" + packetsIn),
+    lines.map((l, i) => h("div", { key: i, className: "text-neutral-400 leading-tight" }, l)));
 }
 
 /* ---------------- HUD ---------------- */
@@ -324,14 +364,26 @@ function Game({ session }) {
   const scoreRef = useRef(0);
   const speedRef = useRef(0);
   const bulletsRef = useRef([]);
-  const remoteRef = useRef({ pos: [0, 0, 10], rot: Math.PI, hp: initialStats.maxHp, score: 0 });
+  // host는 (-10,z=0) 근처, guest는 (10,z=0) 근처에서 서로 마주보고 시작
+  const isHost = session.role === "host";
+  const spawnPos = isHost ? [-15, 0, 0, Math.PI/2] : [15, 0, 0, -Math.PI/2];
+  const remoteSpawn = isHost ? [15, 0, 0] : [-15, 0, 0];
+  const remoteRef = useRef({ pos: remoteSpawn, rot: isHost ? -Math.PI/2 : Math.PI/2, hp: initialStats.maxHp, score: 0 });
   const [hud, setHud] = useState({ hp: hpRef.current, ammo: ammoRef.current, speed: 0, myScore: 0, enemyScore: 0, winner: null });
+  const [netStats, setNetStats] = useState({ in: 0, out: 0 });
+  const netStatsRef = useRef({ in: 0, out: 0 });
   const killGoal = 10;
 
+  // ---- 수신 핸들러: PeerJS는 EventEmitter라 addListener/removeListener 사용 ----
   useEffect(() => {
     const conn = netRef.current;
-    if (!conn) return;
+    if (!conn) { log("ERROR: conn 없음"); return; }
+
+    log(session.role.toUpperCase() + ": 데이터 리스너 등록 (open=" + conn.open + ")");
+
     const onData = (msg) => {
+      netStatsRef.current.in++;
+      if (!msg || !msg.t) return;
       if (msg.t === "state") {
         remoteRef.current.pos = msg.pos;
         remoteRef.current.rot = msg.rot;
@@ -344,16 +396,38 @@ function Game({ session }) {
         if (hpRef.current <= 0) {
           hpRef.current = statsRef.current.maxHp;
           ammoRef.current = statsRef.current.ammo;
-          if (netRef.current && netRef.current.open) netRef.current.send({ t: "death" });
+          if (netRef.current && netRef.current.open) {
+            netRef.current.send({ t: "death" });
+            netStatsRef.current.out++;
+          }
+          log("리스폰!");
         }
       } else if (msg.t === "death") {
         scoreRef.current += 1;
+        log("KILL 확정! (" + scoreRef.current + ")");
       }
     };
+
+    // send를 감싸서 out 카운트
+    const originalSend = conn.send.bind(conn);
+    conn.send = (data) => {
+      netStatsRef.current.out++;
+      return originalSend(data);
+    };
+
     conn.on("data", onData);
-    return () => { if (conn.off) conn.off("data", onData); };
+    conn.on("close", () => log("연결 종료됨"));
+    conn.on("error", (e) => log("conn error: " + e));
+
+    return () => {
+      // PeerJS DataConnection은 EventEmitter를 상속 → removeListener 사용
+      if (typeof conn.removeListener === "function") {
+        conn.removeListener("data", onData);
+      }
+    };
   }, []);
 
+  // HUD & net stats mirror
   useEffect(() => {
     const id = setInterval(() => {
       if (ammoRef.current < statsRef.current.ammo) {
@@ -370,7 +444,8 @@ function Game({ session }) {
         enemyScore: remoteRef.current.score,
         winner,
       });
-    }, 100);
+      setNetStats({ in: netStatsRef.current.in, out: netStatsRef.current.out });
+    }, 200);
     return () => clearInterval(id);
   }, []);
 
@@ -378,16 +453,17 @@ function Game({ session }) {
     if (netRef.current && netRef.current.open) netRef.current.send({ t: "hit", dmg });
   };
 
-  return h("div", { className: "w-screen h-screen bg-black text-white" },
+  return h("div", { className: "w-screen h-screen bg-black text-white relative" },
     h(Canvas, { shadows: true, camera: { position: [0, 6, -10], fov: 70 } },
       h(Suspense, { fallback: null },
-        h(Scene, { netRef, remoteRef, hpRef, ammoRef, scoreRef, statsRef, bulletsRef, speedRef, onHitRemote }))),
+        h(Scene, { netRef, remoteRef, hpRef, ammoRef, scoreRef, statsRef, bulletsRef, speedRef, spawnPos, onHitRemote }))),
     h(HUD, {
       hp: hud.hp, maxHp: statsRef.current.maxHp,
       ammo: hud.ammo, maxAmmo: initialStats.ammo,
       speed: hud.speed, myScore: hud.myScore, enemyScore: hud.enemyScore,
       killGoal, winner: hud.winner, roomCode: session.code,
-    }));
+    }),
+    h(DebugPanel, { role: session.role, packetsIn: netStats.in, packetsOut: netStats.out }));
 }
 
 /* ---------------- App ---------------- */
