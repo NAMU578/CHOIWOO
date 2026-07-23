@@ -108,7 +108,18 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
 #crosshair .v1{width:2px; height:10px; left:16px; top:0;}
 #crosshair .v2{width:2px; height:10px; left:16px; bottom:0;}
 #crosshair .dot{width:3px; height:3px; top:50%; left:50%; transform:translate(-50%,-50%); border-radius:50%; background:#fff;}
+#crosshair .ring{display:none; position:absolute; top:50%; left:50%; width:26px; height:26px; transform:translate(-50%,-50%); border:2px solid var(--neon-cy); border-radius:50%; box-shadow:0 0 6px rgba(34,229,229,0.6); background:transparent;}
+#crosshair .diamond{display:none; position:absolute; top:50%; left:50%; width:14px; height:14px; transform:translate(-50%,-50%) rotate(45deg); border:2px solid var(--neon-or); box-shadow:0 0 6px rgba(255,122,51,0.6); background:transparent;}
 #crosshair.fire .cl{background:#fff;}
+#crosshair.fire .ring{border-color:#fff;}
+#crosshair.fire .diamond{border-color:#fff;}
+/* [하이엔드 UI] 선택한 무기에 따라 크로스헤어 모양이 달라진다 */
+#crosshair.shape-circle .h1,#crosshair.shape-circle .h2,#crosshair.shape-circle .v1,#crosshair.shape-circle .v2{display:none;}
+#crosshair.shape-circle .ring{display:block;}
+#crosshair.shape-dot .h1,#crosshair.shape-dot .h2,#crosshair.shape-dot .v1,#crosshair.shape-dot .v2{display:none;}
+#crosshair.shape-dot .dot{width:4px; height:4px;}
+#crosshair.shape-diamond .h1,#crosshair.shape-diamond .h2,#crosshair.shape-diamond .v1,#crosshair.shape-diamond .v2{display:none;}
+#crosshair.shape-diamond .diamond{display:block;}
 
 #compass{
   position:absolute; top:calc(50% + 44px); left:50%; transform:translateX(-50%);
@@ -179,10 +190,23 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
 .speed-bar-fill.boost{background:#ffcf3b; box-shadow:0 0 14px #ffcf3b;}
 .shield-badge{margin-top:6px; font-size:10px; letter-spacing:2px; color:var(--ok); text-shadow:0 0 6px rgba(59,255,176,0.7); animation:pulse 0.9s infinite;}
 
-#brCluster{position:absolute; right:18px; bottom:18px; width:170px; padding:12px 14px; text-align:right;}
-.ammo-label{font-size:10px; letter-spacing:2px; color:#8a97a3; margin-bottom:4px;}
-.ammo-num{font-size:30px; font-weight:700; color:#eef6f9;}
-.ammo-max{font-size:14px; color:#7c8a97;}
+#brCluster{position:absolute; right:18px; bottom:18px; width:206px; padding:12px 14px; text-align:right;}
+.wpn-row{display:flex; align-items:center; gap:10px; text-align:left;}
+.wpn-icon{width:38px; height:38px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px;
+  background:linear-gradient(160deg, rgba(34,229,229,0.14), rgba(255,255,255,0.02)); border:1px solid var(--edge); border-radius:6px;
+  box-shadow:inset 0 0 8px rgba(34,229,229,0.15);}
+.wpn-info{flex:1; min-width:0;}
+.wpn-name{font-size:11px; letter-spacing:2px; color:#eef6f9; font-weight:700; margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ammo-pips{display:flex; flex-wrap:wrap; gap:2px; max-width:120px;}
+.ammo-pips .pip{width:8px; height:5px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); border-radius:1px; transition:background .1s, box-shadow .1s;}
+.ammo-pips .pip.filled{background:var(--neon-cy); border-color:var(--neon-cy); box-shadow:0 0 5px rgba(34,229,229,0.8);}
+.reload-ring-wrap{width:40px; height:40px; flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+.reload-ring{width:36px; height:36px; transform:rotate(-90deg);}
+.rr-bg{fill:none; stroke:rgba(255,255,255,0.1); stroke-width:3;}
+.rr-fg{fill:none; stroke:var(--neon-or); stroke-width:3; stroke-linecap:round; stroke-dasharray:100.53; stroke-dashoffset:100.53; filter:drop-shadow(0 0 4px rgba(255,122,51,0.8)); transition:stroke-dashoffset .05s linear;}
+.ammo-status{margin-top:8px; display:flex; align-items:flex-end; justify-content:flex-end; gap:4px;}
+.ammo-num{font-size:28px; font-weight:700; color:#eef6f9; line-height:1;}
+.ammo-max{font-size:13px; color:#7c8a97;}
 .ammo-reload{font-size:10px; color:var(--neon-or); letter-spacing:2px; margin-top:4px; animation:pulse 0.8s infinite;}
 
 #centerMsg{position:absolute; top:38%; left:50%; transform:translate(-50%,-50%); text-align:center; display:none;}
@@ -218,6 +242,8 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
 
 #augmentOverlay{position:absolute; inset:0; z-index:55; display:none; align-items:center; justify-content:center; background:rgba(2,3,5,0.85); pointer-events:auto;}
 #augmentOverlay.show{display:flex;}
+#weaponOverlay{position:absolute; inset:0; z-index:56; display:none; align-items:center; justify-content:center; background:rgba(2,3,5,0.9); pointer-events:auto;}
+#weaponOverlay.show{display:flex;}
 .aug-wrap{text-align:center;}
 .aug-title{font-size:13px; letter-spacing:6px; color:var(--neon-or); margin-bottom:22px;}
 .aug-cards{display:flex; gap:18px;}
@@ -229,6 +255,33 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
 
 #pointerHint{position:absolute; bottom:44%; left:50%; transform:translateX(-50%); font-size:11px; letter-spacing:2px; color:#8a97a3; display:none; text-align:center;}
 #pointerHint.show{display:block;}
+
+/* ---------- [조작] 하단 중앙 액티브 스킬 바 ---------- */
+#skillBar{position:absolute; bottom:18px; left:50%; transform:translateX(-50%); display:flex; gap:10px; z-index:20;}
+.skill-slot{position:relative; width:52px; height:52px; border-radius:8px; overflow:hidden;
+  background:linear-gradient(160deg, rgba(27,33,42,0.85), rgba(10,13,17,0.9)); border:1px solid var(--edge);
+  display:flex; align-items:center; justify-content:center; flex-direction:column; box-shadow:0 4px 14px rgba(0,0,0,0.5);}
+.skill-slot .sk-icon{font-size:20px; filter:drop-shadow(0 0 4px rgba(34,229,229,0.4));}
+.skill-slot .sk-key{position:absolute; top:2px; left:4px; font-size:9px; letter-spacing:1px; color:var(--neon-cy); font-weight:700; text-shadow:0 0 4px rgba(34,229,229,0.7);}
+.skill-slot .sk-cd{position:absolute; inset:0; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:700; color:#fff; clip-path:inset(0 0 0 0);}
+.skill-slot.ready{border-color:var(--neon-cy); box-shadow:0 0 12px rgba(34,229,229,0.35);}
+.skill-slot.ready .sk-cd{display:none;}
+
+/* ---------- [패시브] 후방주의 경고 ---------- */
+#rearWarn{position:absolute; bottom:50%; left:50%; transform:translateX(-50%); font-size:13px; letter-spacing:3px;
+  color:var(--danger); text-shadow:0 0 10px rgba(255,59,59,0.8); display:none; animation:pulse 0.5s infinite;}
+#rearWarn.show{display:block;}
+
+/* ---------- FFA FULL SCOREBOARD (TAB) ---------- */
+#fullScoreboard{position:absolute; top:70px; left:50%; transform:translateX(-50%); width:300px; padding:14px 16px; display:none; z-index:30;}
+#fullScoreboard.show{display:block;}
+.fs-title{font-size:11px; letter-spacing:3px; color:var(--neon-cy); text-align:center; margin-bottom:10px;}
+.fs-row{display:flex; align-items:center; gap:10px; padding:7px 4px; font-size:12px; letter-spacing:1px; border-bottom:1px solid rgba(255,255,255,0.05);}
+.fs-row:last-child{border-bottom:none;}
+.fs-rank{width:26px; color:#7c8a97; font-size:11px;}
+.fs-name{flex:1; color:#eef6f9;}
+.fs-kills{color:var(--neon-or); font-weight:700;}
 
 @media (max-width:720px){
   #augmentOverlay .aug-cards{flex-direction:column;}
@@ -255,8 +308,8 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
         <input id="nameInput" class="nameinput" maxlength="12" placeholder="PILOT-01" value="PILOT-01">
       </div>
       <div class="menu-row">
-        <button class="mbtn" id="btnHost">방 만들기<small>HOST GAME (RED)</small></button>
-        <button class="mbtn orange" id="btnJoin">참여하기<small>JOIN GAME (BLUE)</small></button>
+        <button class="mbtn" id="btnHost">방 만들기<small>HOST GAME (FFA)</small></button>
+        <button class="mbtn orange" id="btnJoin">참여하기<small>JOIN GAME</small></button>
       </div>
       <div class="err" id="menuErr"></div>
     </div>
@@ -299,8 +352,9 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
     <div id="deathOverlay"></div>
     <div id="hitFlash"></div>
 
-    <div id="crosshair">
+    <div id="crosshair" class="shape-cross">
       <div class="cl h1"></div><div class="cl h2"></div><div class="cl v1"></div><div class="cl v2"></div><div class="cl dot"></div>
+      <div class="cl ring"></div><div class="cl diamond"></div>
       <div id="hitmarker">✕</div>
     </div>
 
@@ -334,15 +388,43 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
 
     <div id="brCluster" class="glass bracket">
       <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
-      <div class="ammo-label">AMMO</div>
-      <div><span class="ammo-num" id="ammoNum">20</span><span class="ammo-max" id="ammoMax">/20</span></div>
+      <div class="wpn-row">
+        <div class="wpn-icon" id="wpnIcon">🔫</div>
+        <div class="wpn-info">
+          <div class="wpn-name" id="wpnName">돌격소총</div>
+          <div class="ammo-pips" id="ammoPips"></div>
+        </div>
+        <div class="reload-ring-wrap" id="reloadRingWrap" style="display:none;">
+          <svg class="reload-ring" viewBox="0 0 40 40">
+            <circle class="rr-bg" cx="20" cy="20" r="16"></circle>
+            <circle class="rr-fg" id="rrFg" cx="20" cy="20" r="16"></circle>
+          </svg>
+        </div>
+      </div>
+      <div class="ammo-status"><span class="ammo-num" id="ammoNum">20</span><span class="ammo-max" id="ammoMax">/20</span></div>
       <div class="ammo-reload" id="reloadIndicator" style="display:none;">RELOADING...</div>
-      <div class="ability-status" id="abilityStatus" style="display:none;"></div>
+    </div>
+
+    <div id="fullScoreboard" class="glass bracket">
+      <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="fs-title">SCOREBOARD — TAB</div>
+      <div id="fsRows"></div>
     </div>
 
     <div id="centerMsg"><h2>ELIMINATED</h2><p id="respawnText">증강 선택 중...</p></div>
     <div id="connLost">⚠ 상대방과의 연결이 끊어졌습니다</div>
-    <div id="pointerHint">클릭하여 조준 시작 (ESC로 해제) · WASD 이동 · SPACE 점프 · 좌클릭 사격 · R 재장전 · Q 특수스킬</div>
+    <div id="pointerHint">클릭하여 조준 시작 (ESC로 해제) · WASD 이동 · SPACE 점프 · 좌클릭/ENTER 사격 · R 재장전 · 배정된 키로 액티브 스킬 · TAB 스코어보드</div>
+
+    <div id="skillBar"></div>
+
+    <div id="rearWarn">⚠ 후방 위험</div>
+  </div>
+
+  <div id="weaponOverlay">
+    <div class="aug-wrap">
+      <div class="aug-title">무기 선택 — WEAPON SELECT</div>
+      <div class="aug-cards" id="weaponCards"></div>
+    </div>
   </div>
 
   <div id="augmentOverlay">
@@ -428,9 +510,13 @@ const AudioSys = (function(){
 /* =========================================================
    STATE
    ========================================================= */
-let peer=null, conn=null, isHost=false, roomCode='';
-let myName='PILOT-01', enemyName='ENEMY';
-let connectedGuestName=null;   // host: name of the guest currently connected
+let peer=null, isHost=false, roomCode='';
+let myId=null;                 // this client's PeerJS id — used as the canonical player id everywhere
+let hostConns={};              // HOST ONLY: peerId -> DataConnection, one per connected guest (star topology hub)
+let hostConn=null;             // GUEST ONLY: single DataConnection to the host
+let myName='PILOT-01';
+let connectedGuests={};        // HOST ONLY: peerId -> name, drives the lobby player list UI
+let roster={};                 // peerId -> {name, colorIndex}, kept in sync by the host and broadcast to all guests
 let matchStartRequested=false; // guest: host has sent the start signal
 
 const KEYS = {w:false,a:false,s:false,d:false,r:false,space:false};
@@ -438,38 +524,106 @@ let pointerLocked=false;
 let gamePaused=false, gameOver=false, augmentOpen=false, started=false;
 
 const BASE = {
-  maxHealth:100, maxAmmo:20, maxSpeed:20, fireInterval:0.22,
-  dmg:11, reloadTime:1.6, turnRate:2.2, accel:26, decel:4.5, reverseMax:9
+  maxHealth:100, maxSpeed:20, turnRate:2.2, accel:26, decel:4.5, reverseMax:9
 };
-const GRAVITY=-26, JUMP_SPEED=13;
-let aug = { spdMult:1, dmgMult:1, hpMult:1, fireRateMult:1, extraAmmo:0, reloadMult:1,
-  homing:false, ricochet:false, quantumBlink:false,
-  gravityWell:false, positionSwap:false, instaSniper:false, cluster:false };
+const GRAVITY=-26, JUMP_SPEED=13, JUMP_COOLDOWN=1.0, JUMP_PAD_SPEED=22;
+
+/* =========================================================
+   [무기 시스템] 리스폰 시 택1 — 총알 속도는 기존(78) 대비 전 무기가 2.5~4배 이상 빠르다
+   ========================================================= */
+const WEAPONS = {
+  rifle:{
+    key:'rifle', name:'돌격소총', icon:'🔫', crosshair:'cross',
+    desc:'균형 잡힌 표준 화기. 빠른 연사 속도와 안정적인 데미지.',
+    maxAmmo:30, fireInterval:0.12, dmg:9, reloadTime:1.6,
+    bulletSpeed:230, pellets:1, spread:0, projSize:0.09, splash:0, color:0xffee55
+  },
+  shotgun:{
+    key:'shotgun', name:'샷건', icon:'💥', crosshair:'circle',
+    desc:'산탄 7발 동시 발사. 근거리에서 압도적인 화력.',
+    maxAmmo:8, fireInterval:0.75, dmg:7, reloadTime:2.0,
+    bulletSpeed:200, pellets:7, spread:0.085, projSize:0.07, splash:0, color:0xffaa33
+  },
+  sniper:{
+    key:'sniper', name:'스나이퍼', icon:'🎯', crosshair:'dot',
+    desc:'장거리 저격용. 느린 연사지만 단발 데미지가 매우 높다.',
+    maxAmmo:5, fireInterval:1.3, dmg:42, reloadTime:2.4,
+    bulletSpeed:320, pellets:1, spread:0, projSize:0.06, splash:0, color:0x88ffff
+  },
+  rocket:{
+    key:'rocket', name:'로켓 런처', icon:'🚀', crosshair:'diamond',
+    desc:'명중 지점 주변에 광역 폭발 데미지(스플래시)를 입힌다.',
+    maxAmmo:4, fireInterval:1.5, dmg:55, reloadTime:2.8,
+    bulletSpeed:190, pellets:1, spread:0, projSize:0.22, splash:4.5, color:0xff5533
+  }
+};
+const WEAPON_LIST=['rifle','shotgun','sniper','rocket'];
+function curWeapon(){ return WEAPONS[local.weaponKey||'rifle']; }
+
+let aug = {
+  spdMult:1, dmgMult:1, hpMult:1, fireRateMult:1, extraAmmo:0, reloadMult:1,
+  // 패시브
+  homing:false, ricochet:false, shotgunize:false, sniperize:false, vampire:false,
+  explosiveRounds:false, piercing:false, poison:false, boomerang:false, hedgehog:false,
+  rearWarn:false, adrenaline:false, infiniteAmmo:false, regen:false,
+  // 유틸리티
+  zeroGravity:false, wallPhase:false, kamikaze:false, heavyArmor:false
+};
+// [증강 시스템] 이미 획득한 증강 id 목록 — 재등장 방지 필터링에 사용
+let ownedAugmentIds = [];
+// [조작] 보유한 액티브 스킬 목록: {id,key,name,icon,cdMax,cd,activate}
+let activeSkills = [];
+const ACTIVE_KEY_POOL=['q','e','f','c','x','shift'];
+// 실시간 필드 오브젝트 (지뢰/블랙홀) — host가 좌표를 정하고 전원이 각자 판정한다
+let mines=[], gravWells=[];
+
+function adrenalineActive(){ return aug.adrenaline && local.alive && local.health/maxHP() < 0.3; }
 function maxHP(){ return Math.round(BASE.maxHealth*aug.hpMult); }
-function maxAmmoC(){ return BASE.maxAmmo+aug.extraAmmo; }
-function maxSpeedC(){ return BASE.maxSpeed*aug.spdMult; }
-function fireIntervalC(){ return BASE.fireInterval/aug.fireRateMult; }
-function dmgC(){ return BASE.dmg*aug.dmgMult; }
-function reloadTimeC(){ return BASE.reloadTime/aug.reloadMult; }
+function maxAmmoC(){ return curWeapon().maxAmmo+aug.extraAmmo; }
+function maxSpeedC(){ let s=BASE.maxSpeed*aug.spdMult; if(adrenalineActive()) s*=1.3; return s; }
+function fireIntervalC(){
+  let fi=curWeapon().fireInterval/aug.fireRateMult;
+  if(aug.sniperize) fi*=2.8;          // [패시브] 스나이퍼화 — 극악의 연사속도
+  if(adrenalineActive()) fi*=0.7;     // [패시브] 아드레날린 — 체력 30% 이하일 때 연사 증가
+  return fi;
+}
+function dmgC(){
+  let d=curWeapon().dmg*aug.dmgMult;
+  if(aug.sniperize) d*=1.8;           // [패시브] 스나이퍼화 — 데미지 +80%
+  return d;
+}
+function reloadTimeC(){ return curWeapon().reloadTime/aug.reloadMult; }
 
 const local = {
-  team:'red', x:-42,y:0,z:0, yaw:0, speed:0, vy:0, blinkTimer:0, gravityWell:null,
-  speedBoostTimer:0, shieldTimer:0,
+  team:'red', color:0xff3b4d, sizeScale:1, x:-42,y:0,z:0, yaw:0, speed:0, vy:0, blinkTimer:0, gravityWell:null,
+  speedBoostTimer:0, shieldTimer:0, reflectTimer:0, invisTimer:0, empTimer:0, jumpCooldown:0,
+  poisonTimer:0, poisonAcc:0, poisonDps:0, poisonSourceId:null, regenAcc:0, doubleJumpArmed:false,
   camYaw:0, camPitch:0,
-  health:BASE.maxHealth, ammo:BASE.maxAmmo,
+
+  weaponKey:'rifle', reloadStart:0, reloadDuration:0,
+  health:BASE.maxHealth, ammo:WEAPONS.rifle.maxAmmo,
   alive:true, kills:0, reloading:false, fireCooldown:0
 };
-const remote = {
-  team:'blue', x:42,y:0,z:0, yaw:Math.PI, turretYaw:Math.PI,
-  health:BASE.maxHealth, alive:true, kills:0, connected:false,
-  tx:42,ty:0,tz:0,tyaw:Math.PI
-};
+// FFA 1:N — every other connected player lives here, keyed by their PeerJS id.
+// The host is the star-topology hub: it relays each guest's state/shots to every other guest.
+let remotePlayers = {};
+
+const PLAYER_COLORS=[0xff3b4d,0x2d8cff,0x3bffb0,0xffcf3b,0xc9a3ff,0xff7a33,0x22e5e5,0xffffff];
+function colorForIndex(i){ return PLAYER_COLORS[i%PLAYER_COLORS.length]; }
 
 const ARENA = 58;
 const RED_SPAWNS  = [[-44,12],[-44,-12],[-40,0],[-48,22],[-48,-22]];
 const BLUE_SPAWNS = [[44,12],[44,-12],[40,0],[48,22],[48,-22]];
+const ALL_SPAWNS = RED_SPAWNS.concat(BLUE_SPAWNS);
 function teamSpawns(team){ return team==='red'?RED_SPAWNS:BLUE_SPAWNS; }
 function pickSpawn(team){ const s=teamSpawns(team); return s[Math.floor(Math.random()*s.length)]; }
+/* deterministic shuffle (same seed => same order on every client) so every peer assigns
+   the same spawn point to the same player id without needing extra network round-trips */
+function shuffledSpawns(rng){
+  const pool=[...ALL_SPAWNS];
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(rng()*(i+1)); const t=pool[i]; pool[i]=pool[j]; pool[j]=t; }
+  return pool;
+}
 
 /* seeded PRNG so host & joiner generate the identical procedural map */
 function mulberry32(seed){
@@ -552,8 +706,13 @@ function groundHeightAt(x,z){
   return gh;
 }
 
-/* field pickups — speed pads & shields, seeded so both peers see the same layout */
-let speedPads=[], shieldPickups=[];
+/* field pickups — speed pads, shields & jump pads, seeded so every peer sees the same layout */
+let speedPads=[], shieldPickups=[], jumpPads=[];
+/* airdrop supply crates — spawned live during the match, so the HOST decides the spot and
+   broadcasts it to every guest to keep everyone's view in sync */
+let airdrops=[];
+let nextAirdropAt=0;
+const AIRDROP_INTERVAL_MIN=25000, AIRDROP_INTERVAL_MAX=40000;
 function randomOpenSpot(rng, marginFromEdge, minSpawnDist){
   const allSpawns = RED_SPAWNS.concat(BLUE_SPAWNS);
   for(let attempts=0; attempts<200; attempts++){
@@ -570,6 +729,10 @@ function randomOpenSpot(rng, marginFromEdge, minSpawnDist){
 function buildPickups(seed){
   speedPads.forEach(p=>{ scene.remove(p.mesh); scene.remove(p.light); }); speedPads=[];
   shieldPickups.forEach(p=>{ scene.remove(p.mesh); scene.remove(p.light); }); shieldPickups=[];
+  jumpPads.forEach(p=>{ scene.remove(p.mesh); scene.remove(p.light); }); jumpPads=[];
+  airdrops.forEach(a=>{ scene.remove(a.mesh); scene.remove(a.light); }); airdrops=[];
+  mines.forEach(m=>{ scene.remove(m.mesh); scene.remove(m.light); }); mines=[];
+  gravWells=[];
 
   const padRng=mulberry32(seed+1337);
   for(let i=0;i<6;i++){
@@ -592,11 +755,25 @@ function buildPickups(seed){
     const light=new THREE.PointLight(0x3bffb0,1.4,8); light.position.set(pos.x,1.4,pos.z); scene.add(light);
     shieldPickups.push({x:pos.x,z:pos.z,r:1.4,mesh,light,readyAt:0});
   }
+
+  // [맵 기믹] 점프 패드 — 밟으면 위로 튕겨 오른다. 스피드/쉴드 픽업과 동일하게 시드 기반이라
+  // 모든 클라이언트가 같은 위치에서 같은 패드를 보게 된다.
+  const jumpRng=mulberry32(seed+4242);
+  for(let i=0;i<4;i++){
+    const pos=randomOpenSpot(jumpRng, 10, 10);
+    const mat=new THREE.MeshStandardMaterial({color:0x1a0f24, emissive:0xc9a3ff, emissiveIntensity:2.2, metalness:0.3, roughness:0.4});
+    const mesh=new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,0.12,20), mat);
+    mesh.position.set(pos.x,0.06,pos.z);
+    scene.add(mesh);
+    const light=new THREE.PointLight(0xc9a3ff,1.4,7); light.position.set(pos.x,0.6,pos.z); scene.add(light);
+    jumpPads.push({x:pos.x,z:pos.z,r:1.8,mesh,light});
+  }
 }
 
 function updatePickups(dt, now){
   speedPads.forEach(p=>{ p.mesh.rotation.y += dt*1.2; });
   shieldPickups.forEach(p=>{ p.mesh.rotation.y += dt*1.6; p.mesh.rotation.x += dt*0.8; p.mesh.position.y = 1.1+Math.sin(now/300)*0.15; });
+  jumpPads.forEach(p=>{ p.mesh.rotation.y += dt*2.0; });
 
   if(!local.alive) return;
   for(const p of speedPads){
@@ -618,37 +795,146 @@ function updatePickups(dt, now){
       AudioSys.blink();
     }
   }
+  // jump pads always trigger (no cooldown) as long as the kart is near ground level,
+  // and deliberately bypass the manual-jump cooldown — it's the pad launching you, not you jumping
+  for(const p of jumpPads){
+    const dx=local.x-p.x, dz=local.z-p.z;
+    if(dx*dx+dz*dz < p.r*p.r && local.y<=0.3){
+      local.vy=JUMP_PAD_SPEED;
+      AudioSys.jump();
+      cameraShake(0.08,0.16);
+    }
+  }
+}
+
+/* =========================================================
+   AIRDROP — periodic host-authoritative supply crate w/ red smoke
+   ========================================================= */
+function scheduleNextAirdrop(now){
+  nextAirdropAt = now + AIRDROP_INTERVAL_MIN + Math.random()*(AIRDROP_INTERVAL_MAX-AIRDROP_INTERVAL_MIN);
+}
+function hostMaybeSpawnAirdrop(now){
+  if(!isHost || !started || gameOver) return;
+  if(now < nextAirdropAt) return;
+  scheduleNextAirdrop(now);
+  const spot=randomOpenSpot(Math.random, 10, 8);
+  const id='ad'+Math.floor(Math.random()*1e9);
+  spawnAirdropLocal(id, spot.x, spot.z);
+  broadcastToAll({t:'airdrop', id, x:spot.x, z:spot.z});
+}
+function spawnAirdropLocal(id,x,z){
+  if(airdrops.find(a=>a.id===id)) return;
+  const crateMat=new THREE.MeshStandardMaterial({color:0x2a1010, emissive:0xff3b3b, emissiveIntensity:1.4, metalness:0.3, roughness:0.6});
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.6,1.6), crateMat);
+  mesh.position.set(x,0.8,z);
+  scene.add(mesh);
+  const light=new THREE.PointLight(0xff3b3b,1.6,10); light.position.set(x,1.6,z); scene.add(light);
+  airdrops.push({id,x,z,r:1.9,mesh,light,smokeAcc:0,collected:false});
+}
+function removeAirdrop(id){
+  const idx=airdrops.findIndex(a=>a.id===id);
+  if(idx<0) return;
+  const ad=airdrops[idx];
+  scene.remove(ad.mesh); scene.remove(ad.light);
+  airdrops.splice(idx,1);
+}
+function updateAirdrops(dt, now){
+  for(const ad of airdrops){
+    ad.mesh.rotation.y += dt*0.6;
+    ad.smokeAcc += dt;
+    if(ad.smokeAcc>0.08){ ad.smokeAcc=0; spawnSmokeParticle(ad.x, ad.z); }
+    if(!ad.collected && local.alive){
+      const dx=local.x-ad.x, dz=local.z-ad.z;
+      if(dx*dx+dz*dz < ad.r*ad.r){
+        ad.collected=true;
+        local.health=maxHP();
+        local.ammo=maxAmmoC();
+        local.shieldTimer=Math.max(local.shieldTimer,4.0);
+        AudioSys.pickAugment();
+        cameraShake(0.08,0.18);
+        removeAirdrop(ad.id);
+        if(isHost) broadcastToAll({t:'airdropTaken', id:ad.id});
+        else if(hostConn && hostConn.open) hostConn.send({t:'airdropTaken', id:ad.id});
+      }
+    }
+  }
+}
+function spawnSmokeParticle(x,z){
+  const geo=new THREE.SphereGeometry(0.28,6,6);
+  const mat=new THREE.MeshBasicMaterial({color:0xff3b3b, transparent:true, opacity:0.45});
+  const m=new THREE.Mesh(geo,mat);
+  m.position.set(x+(Math.random()*0.6-0.3), 0.4, z+(Math.random()*0.6-0.3));
+  scene.add(m);
+  const vel=new THREE.Vector3((Math.random()*0.6-0.3),1.4+Math.random()*0.6,(Math.random()*0.6-0.3));
+  particles.push({mesh:m, vel, life:1.1, maxLife:1.1, noGravity:true});
+}
+
+// [패시브] 거인화(체력↑속도↓,크기↑) / 앤트맨(속도↑체력↓,크기↓) 중 랜덤 적용 — 스탯은 기존 aug.hpMult/spdMult 파이프라인에 얹는다
+function applySizeShift(){
+  if(Math.random()<0.5){
+    aug.hpMult*=1.4; aug.spdMult*=0.8; local.sizeScale*=1.4;
+  } else {
+    aug.hpMult*=0.8; aug.spdMult*=1.3; local.sizeScale*=0.6;
+  }
+  local.health=Math.min(local.health, maxHP());
+  if(localMesh) localMesh.scale.setScalar(local.sizeScale);
+}
+// [유틸리티] 랜덤 총기 — 즉시 무작위 무기로 강제 교체
+function applyRandomGun(){
+  const others=WEAPON_LIST.filter(k=>k!==local.weaponKey);
+  const pick=others[Math.floor(Math.random()*others.length)]||local.weaponKey;
+  applyWeapon(pick);
 }
 
 const AUGMENT_POOL = [
-  {icon:'⚡', name:'가속 부스터', desc:'이동 속도 +20%', apply:()=>{aug.spdMult*=1.2;}},
-  {icon:'💥', name:'중화기 개조', desc:'총알 데미지 +25%', apply:()=>{aug.dmgMult*=4;}},
-  {icon:'🛡', name:'강화 장갑', desc:'최대 체력 +25% (즉시 회복)', apply:()=>{
-      const old=maxHP(); aug.hpMult*=1.25; const diff=maxHP()-old; local.health=Math.min(maxHP(), local.health+diff);
-  }},
-  {icon:'❤', name:'응급 처치', desc:'체력 즉시 40 회복', apply:()=>{ local.health=Math.min(maxHP(), local.health+40); }},
-  {icon:'🔫', name:'고속 연사 장치', desc:'연사 속도 +30%', apply:()=>{aug.fireRateMult*=1.9;}},
-  {icon:'📦', name:'확장 탄창', desc:'최대 탄창 +10발', apply:()=>{aug.extraAmmo+=1000;}},
-  {icon:'🔧', name:'긴급 재장전', desc:'재장전 속도 +40%', apply:()=>{aug.reloadMult*=1.4;}},
-  {icon:'🎯', name:'유도 미사일', desc:'발사한 총알이 적을 향해 서서히 궤적을 꺾습니다', apply:()=>{aug.homing=true;}},
-  {icon:'💀', name:'데스빔 프로토콜', desc:'Q 키로 즉사급 데미지의 특수 빔 발사 (쿨타임 15초)', apply:()=>{aug.deathBeam=true;}},
-  {icon:'🎲', name:'즉사의 룰렛', desc:'기본 사격에 10% 확률로 적을 한 방에 처치', apply:()=>{aug.instaKillChance=true;}},
-  {icon:'🔄', name:'도탄 강화', desc:'총알이 장애물에 한 번 튕겨나가 재차 명중을 노립니다', apply:()=>{aug.ricochet=true;}},
-  {icon:'🌀', name:'양자 블링크', desc:'8초마다 자동으로 무작위 방향 순간 이동 (예측 불가)', apply:()=>{aug.quantumBlink=true;}}
+  // ---------- 패시브 (15) ----------
+  {id:'shotgunize', type:'passive', icon:'💢', name:'샷건화', desc:'모든 무기가 5발의 산탄으로 발사된다.', apply:()=>{aug.shotgunize=true;}},
+  {id:'sniperize', type:'passive', icon:'🎯', name:'스나이퍼화', desc:'연사 속도가 극도로 느려지는 대신 데미지가 +80%.', apply:()=>{aug.sniperize=true;}},
+  {id:'vampire', type:'passive', icon:'🩸', name:'뱀파이어', desc:'적을 명중시키면 가한 데미지의 25%만큼 즉시 회복.', apply:()=>{aug.vampire=true;}},
+  {id:'sizeshift', type:'passive', icon:'🐜', name:'거인화 / 앤트맨', desc:'무작위로 거인(체력+40%·속도-20%) 또는 앤트맨(속도+30%·체력-20%)이 된다.', apply:applySizeShift},
+  {id:'ricochet', type:'passive', icon:'🔄', name:'도탄 강화', desc:'총알이 장애물에 한 번 튕겨나가 재차 명중을 노린다.', apply:()=>{aug.ricochet=true;}},
+  {id:'explosive', type:'passive', icon:'💣', name:'폭발탄', desc:'모든 총알에 폭발 스플래시 데미지가 붙는다.', apply:()=>{aug.explosiveRounds=true;}},
+  {id:'piercing', type:'passive', icon:'🗡', name:'관통탄', desc:'총알이 장애물과 적을 멈추지 않고 그대로 관통한다.', apply:()=>{aug.piercing=true;}},
+  {id:'homing', type:'passive', icon:'🧲', name:'유도탄', desc:'발사한 총알이 적을 향해 서서히 궤적을 꺾는다.', apply:()=>{aug.homing=true;}},
+  {id:'poison', type:'passive', icon:'☠', name:'독성탄', desc:'피격 대상에게 지속 피해(중독)를 남긴다.', apply:()=>{aug.poison=true;}},
+  {id:'boomerang', type:'passive', icon:'🪃', name:'부메랑탄', desc:'총알이 일정 거리를 날아간 뒤 되돌아온다.', apply:()=>{aug.boomerang=true;}},
+  {id:'hedgehog', type:'passive', icon:'🦔', name:'고슴도치', desc:'상대 카트와 충돌하면 접촉 데미지를 입힌다.', apply:()=>{aug.hedgehog=true;}},
+  {id:'rearwarn', type:'passive', icon:'📡', name:'후방주의', desc:'후방에 적이 접근하면 화면에 경고가 표시된다.', apply:()=>{aug.rearWarn=true;}},
+  {id:'adrenaline', type:'passive', icon:'💉', name:'아드레날린', desc:'체력이 30% 이하일 때 이동 속도와 연사 속도가 증가한다.', apply:()=>{aug.adrenaline=true;}},
+  {id:'infiniteammo', type:'passive', icon:'♾', name:'무한탄창', desc:'재장전 없이 탄약을 무한히 사용한다.', apply:()=>{aug.infiniteAmmo=true;}},
+  {id:'regen', type:'passive', icon:'💚', name:'재생력', desc:'매초 체력이 서서히 자연 회복된다.', apply:()=>{aug.regen=true;}},
+
+  // ---------- 액티브 (10) — 획득 시 남는 키(Q/E/F/C/X/Shift)에 순차 배정 ----------
+  {id:'deathbeam', type:'active', icon:'💀', name:'데스빔', desc:'조준선 상의 적을 즉사시키는 관통 빔을 발사한다.', cooldown:30, activate:()=>activateDeathBeam()},
+  {id:'quantumdash', type:'active', icon:'🌀', name:'퀀텀 대시', desc:'바라보는 방향으로 즉시 순간이동한다.', cooldown:30, activate:()=>activateQuantumDash()},
+  {id:'reflectshield', type:'active', icon:'🛡', name:'반사실드', desc:'3초간 피격을 무효화하고 공격자에게 반사탄을 날린다.', cooldown:30, activate:()=>activateReflectShield()},
+  {id:'blackhole', type:'active', icon:'🕳', name:'블랙홀', desc:'주변의 모든 플레이어를 끌어당기는 중력장을 생성한다.', cooldown:30, activate:()=>activateBlackhole()},
+  {id:'posswap', type:'active', icon:'🔀', name:'위치교환', desc:'가장 가까운 적의 위치로 즉시 순간이동한다.', cooldown:30, activate:()=>activatePosSwap()},
+  {id:'mine', type:'active', icon:'🧨', name:'지뢰매설', desc:'현재 위치에 접촉 시 폭발하는 지뢰를 설치한다.', cooldown:30, activate:()=>activateMine()},
+  {id:'invisible', type:'active', icon:'👻', name:'투명화', desc:'4초간 다른 플레이어에게 보이지 않는다.', cooldown:30, activate:()=>activateInvisible()},
+  {id:'jumpboost', type:'active', icon:'⬆', name:'점프 부스터', desc:'공중에서도 즉시 강하게 솟아오른다 (2단 점프).', cooldown:30, activate:()=>activateJumpBoost()},
+  {id:'emp', type:'active', icon:'⚡', name:'EMP 터뜨리기', desc:'가장 가까운 적의 조작을 잠시 마비시킨다.', cooldown:30, activate:()=>activateEmp()},
+  {id:'healpulse', type:'active', icon:'❤', name:'힐링 펄스', desc:'즉시 체력을 크게 회복한다.', cooldown:30, activate:()=>activateHealPulse()},
+
+  // ---------- 유틸리티 (5) ----------
+  {id:'zerog', type:'utility', icon:'🌌', name:'무중력', desc:'중력이 크게 줄어들어 체공 시간이 길어진다.', apply:()=>{aug.zeroGravity=true;}},
+  {id:'wallphase', type:'utility', icon:'👤', name:'벽 통과', desc:'더 이상 장애물과 충돌하지 않고 그대로 통과한다.', apply:()=>{aug.wallPhase=true;}},
+  {id:'randomgun', type:'utility', icon:'🎲', name:'랜덤 총기', desc:'즉시 무작위 무기로 교체된다.', apply:applyRandomGun},
+  {id:'kamikaze', type:'utility', icon:'💥', name:'카미카제', desc:'사망 시 주변 적에게 폭발 피해를 남긴다.', apply:()=>{aug.kamikaze=true;}},
+  {id:'heavyarmor', type:'utility', icon:'🪖', name:'중장갑', desc:'피격 카메라 흔들림이 거의 없고 받는 데미지가 20% 감소한다.', apply:()=>{aug.heavyArmor=true;}}
 ];
 
 /* =========================================================
    THREE.JS SCENE
    ========================================================= */
 let renderer, scene, camera;
-let localMesh, remoteMesh, localTurret, remoteTurret;
+let localMesh, localTurret;
 let bullets = [];
 let particles = [];
 let shakeMag=0, shakeTime=0, shakeDur=0.001;
 function cameraShake(mag,dur){
   if(mag>=shakeMag || shakeTime<=0){ shakeMag=mag; shakeDur=dur; shakeTime=dur; }
 }
-let deathBeamCD=0;
 let clock = new THREE.Clock();
 
 function initScene(){
@@ -758,7 +1044,10 @@ window.addEventListener('keydown', e=>{
   if(k in KEYS) KEYS[k]=true;
   if(k===' '||e.code==='Space'){ KEYS.space=true; e.preventDefault(); }
   if(k==='r') tryReload();
-  if(k==='q') tryDeathBeam();
+  if(k==='enter'){
+    if(pointerLocked && gameActive() && !gamePaused && !gameOver) tryShoot();
+  }
+  tryActivateSkillByKey(k);
 });
 window.addEventListener('keyup', e=>{
   const k=e.key.toLowerCase();
@@ -768,7 +1057,7 @@ window.addEventListener('keyup', e=>{
 
 const canvasEl=$('gameCanvas');
 canvasEl.addEventListener('click', ()=>{
-  if(gameActive() && !augmentOpen && !gameOver && !pointerLocked) canvasEl.requestPointerLock();
+  if(gameActive() && !augmentOpen && !weaponPickerOpen && !gameOver && !pointerLocked) canvasEl.requestPointerLock();
 });
 document.addEventListener('pointerlockchange', ()=>{
   pointerLocked = document.pointerLockElement===canvasEl;
@@ -785,19 +1074,25 @@ document.addEventListener('mousedown', e=>{
   if(pointerLocked && gameActive() && !gamePaused && !gameOver) tryShoot();
 });
 function gameActive(){ return $('hud').classList.contains('show'); }
-function refreshHint(){ $('pointerHint').classList.toggle('show', gameActive() && !pointerLocked && !augmentOpen && !gameOver); }
+function refreshHint(){ $('pointerHint').classList.toggle('show', gameActive() && !pointerLocked && !augmentOpen && !weaponPickerOpen && !gameOver); }
 
 /* =========================================================
    PHYSICS
    ========================================================= */
-function circleCollide(x,z,radius){
-  for(const o of OBSTACLES){
-    const dx=x-o.x, dz=z-o.z;
-    const dist=Math.sqrt(dx*dx+dz*dz);
-    const minDist=o.r+radius;
-    if(dist<minDist && dist>0.0001){
-      const push=(minDist-dist);
-      x += (dx/dist)*push; z += (dz/dist)*push;
+function circleCollide(x,z,radius,y){
+  // [유틸리티] 벽 통과 — 장애물과의 충돌 판정을 완전히 건너뛴다(아레나 경계는 유지)
+  if(!aug.wallPhase){
+    for(const o of OBSTACLES){
+      // [맵 버그 수정] 장애물의 실제 높이(o.h) 위로 올라간 상태라면 그 위 공간은 뚫려 있어야 한다 —
+      // 더 이상 장애물 전체 높이에 걸쳐 무한히 막히는 투명벽 판정을 쓰지 않는다.
+      if(y!==undefined && y >= o.h-0.05) continue;
+      const dx=x-o.x, dz=z-o.z;
+      const dist=Math.sqrt(dx*dx+dz*dz);
+      const minDist=o.r+radius;
+      if(dist<minDist && dist>0.0001){
+        const push=(minDist-dist);
+        x += (dx/dist)*push; z += (dz/dist)*push;
+      }
     }
   }
   x=Math.max(-ARENA+1, Math.min(ARENA-1,x));
@@ -807,8 +1102,9 @@ function circleCollide(x,z,radius){
 
 function updateLocal(dt){
   if(!local.alive) return;
-  const steer=(KEYS.a?1:0)-(KEYS.d?1:0);
-  const throttle=(KEYS.w?1:0)-(KEYS.s?1:0);
+  const empActive = local.empTimer>0; // [액티브] EMP에 맞으면 잠시 조작 불능
+  const steer=empActive?0:((KEYS.a?1:0)-(KEYS.d?1:0));
+  const throttle=empActive?0:((KEYS.w?1:0)-(KEYS.s?1:0));
   const turnFactor=Math.min(1, Math.abs(local.speed)/4+0.35);
   local.yaw += steer*BASE.turnRate*dt*turnFactor*(local.speed<0?-1:1);
 
@@ -823,51 +1119,86 @@ function updateLocal(dt){
 
   const fwd=new THREE.Vector3(Math.sin(local.yaw),0,Math.cos(local.yaw));
   let nx=local.x+fwd.x*local.speed*dt, nz=local.z+fwd.z*local.speed*dt;
-  const c=circleCollide(nx,nz,1.1);
+  const c=circleCollide(nx,nz,1.1,local.y);
   if(c.x!==nx || c.z!==nz) local.speed*=0.3;
   local.x=c.x; local.z=c.z;
 
-  // kart-vs-kart collision: bounce apart so they can't overlap/pass through each other
-  if(remote.connected && remote.alive){
-    const dx=local.x-remote.x, dz=local.z-remote.z;
+  // kart-vs-kart collision: bounce apart from EVERY connected opponent so karts can't overlap/pass
+  // through each other in the FFA (remotePlayers={} holds every other player now, not just one)
+  for(const rp of Object.values(remotePlayers)){
+    if(!rp.connected || !rp.alive) continue;
+    const dx=local.x-rp.x, dz=local.z-rp.z;
     const dist=Math.sqrt(dx*dx+dz*dz);
-    const minDist=2.1;
+    const minDist=2.1*(((local.sizeScale||1)+(rp.sizeScale||1))/2);
     if(dist<minDist && dist>0.0001){
       const push=(minDist-dist)*0.55;
       local.x += (dx/dist)*push;
       local.z += (dz/dist)*push;
       local.speed *= 0.55;
-      const cc=circleCollide(local.x, local.z, 1.1);
+      const cc=circleCollide(local.x, local.z, 1.1, local.y);
       local.x=cc.x; local.z=cc.z;
+
+      // [패시브] 고슴도치 — 내가 보유하고 있으면 충돌한 상대에게 접촉 데미지를 보낸다 (상대가 자기 자신에게 적용)
+      if(aug.hedgehog){
+        local.hedgehogCd = local.hedgehogCd || {};
+        const now=performance.now();
+        if(!local.hedgehogCd[rp.id] || now>local.hedgehogCd[rp.id]){
+          local.hedgehogCd[rp.id]=now+700;
+          sendToPlayer(rp.id, {t:'contactDamage', dmg:8, ownerId:myId});
+        }
+      }
     }
   }
 
-  // jump / gravity
-  if(KEYS.space && local.y<=0 && local.vy<=0){
+  // [밸런스] jump / gravity — 스페이스바 점프에 1초 쿨타임 적용 (토끼뜀 방지)
+  if(KEYS.space && local.y<=0 && local.vy<=0 && local.jumpCooldown<=0){
     local.vy=JUMP_SPEED;
+    local.jumpCooldown=JUMP_COOLDOWN;
     AudioSys.jump();
   }
-  local.vy += GRAVITY*dt;
+  local.vy += GRAVITY*(aug.zeroGravity?0.35:1)*dt; // [유틸리티] 무중력 — 중력 65% 감소
   local.y += local.vy*dt;
   if(local.y<0){ local.y=0; local.vy=0; }
+  if(local.jumpCooldown>0) local.jumpCooldown=Math.max(0,local.jumpCooldown-dt);
 
-  // quantum blink: chaotic auto-teleport
-  if(aug.quantumBlink){
-    local.blinkTimer += dt;
-    if(local.blinkTimer>=8){
-      local.blinkTimer=0;
-      const ang=Math.random()*Math.PI*2;
-      const dist=5+Math.random()*4;
-      const bc=circleCollide(local.x+Math.cos(ang)*dist, local.z+Math.sin(ang)*dist, 1.1);
-      local.x=bc.x; local.z=bc.z;
-      AudioSys.blink();
+  // [액티브] 블랙홀 — 만료되지 않은 중력장 안에 있으면 중심으로 서서히 당겨진다 (자기 것 제외)
+  const now=performance.now();
+  for(let i=gravWells.length-1;i>=0;i--){
+    const gw=gravWells[i];
+    if(now>gw.expireAt){ gravWells.splice(i,1); continue; }
+    if(gw.ownerId===myId) continue;
+    const dx=gw.x-local.x, dz=gw.z-local.z;
+    const dist=Math.sqrt(dx*dx+dz*dz);
+    if(dist>0.4 && dist<gw.radius){
+      const pull=gw.strength*(1-dist/gw.radius)*dt;
+      local.x += (dx/dist)*pull;
+      local.z += (dz/dist)*pull;
     }
+  }
+
+  // [패시브] 독성탄 DOT — 0.5초마다 틱 데미지
+  if(local.poisonTimer>0){
+    local.poisonAcc += dt;
+    local.poisonTimer = Math.max(0, local.poisonTimer-dt);
+    if(local.poisonAcc>=0.5){
+      local.poisonAcc-=0.5;
+      applyDamageToLocal(local.poisonDps||3, local.poisonSourceId);
+    }
+  }
+  // [패시브] 재생력 — 매초 소량 회복
+  if(aug.regen && local.alive && local.health<maxHP()){
+    local.regenAcc += dt;
+    if(local.regenAcc>=1){ local.regenAcc-=1; local.health=Math.min(maxHP(), local.health+2); }
   }
 
   if(local.speedBoostTimer>0) local.speedBoostTimer=Math.max(0,local.speedBoostTimer-dt);
   if(local.shieldTimer>0) local.shieldTimer=Math.max(0,local.shieldTimer-dt);
+  if(local.reflectTimer>0) local.reflectTimer=Math.max(0,local.reflectTimer-dt);
+  if(local.invisTimer>0) local.invisTimer=Math.max(0,local.invisTimer-dt);
+  if(local.empTimer>0) local.empTimer=Math.max(0,local.empTimer-dt);
   if(local.fireCooldown>0) local.fireCooldown-=dt;
-  if(deathBeamCD>0) deathBeamCD=Math.max(0,deathBeamCD-dt);
+  // [조작] 보유한 액티브 스킬들의 쿨타임을 매 프레임 갱신
+  activeSkills.forEach(s=>{ if(s.cd>0) s.cd=Math.max(0,s.cd-dt); });
 }
 
 function computeAimDir(){
@@ -898,64 +1229,230 @@ function updateCamera(dt){
 
 function aimDirection(){ return computeAimDir(); }
 
-function updateRemote(dt){
-  if(!remote.connected) return;
-  const f=Math.min(1,dt*10);
-  remote.x += (remote.tx-remote.x)*f;
-  remote.z += (remote.tz-remote.z)*f;
-  remote.y += ((remote.ty||0)-remote.y)*f;
-  let dyaw=remote.tyaw-remote.yaw;
-  while(dyaw>Math.PI) dyaw-=Math.PI*2;
-  while(dyaw<-Math.PI) dyaw+=Math.PI*2;
-  remote.yaw += dyaw*f;
-  remoteMesh.position.set(remote.x,remote.y,remote.z);
-  remoteMesh.rotation.y=remote.yaw;
-  remoteMesh.visible=remote.alive;
-  if(remoteTurret) remoteTurret.rotation.y = (remote.turretYaw!==undefined?remote.turretYaw:remote.yaw) - remote.yaw;
+function updateRemotePlayers(dt){
+  Object.values(remotePlayers).forEach(rp=>{
+    if(!rp.connected) return;
+    const f=Math.min(1,dt*10);
+    rp.x += (rp.tx-rp.x)*f;
+    rp.z += (rp.tz-rp.z)*f;
+    rp.y += ((rp.ty||0)-rp.y)*f;
+    let dyaw=rp.tyaw-rp.yaw;
+    while(dyaw>Math.PI) dyaw-=Math.PI*2;
+    while(dyaw<-Math.PI) dyaw+=Math.PI*2;
+    rp.yaw += dyaw*f;
+    if(rp.mesh){
+      rp.mesh.position.set(rp.x,rp.y,rp.z);
+      rp.mesh.rotation.y=rp.yaw;
+      rp.mesh.visible = rp.alive && !rp.invis; // [액티브] 투명화 — 다른 플레이어에게 안 보인다
+      rp.mesh.scale.setScalar(rp.sizeScale||1); // [패시브] 거인화/앤트맨
+    }
+    if(rp.turret) rp.turret.rotation.y = (rp.turretYaw!==undefined?rp.turretYaw:rp.yaw) - rp.yaw;
+  });
 }
 
 /* =========================================================
    SHOOTING / BULLETS
    ========================================================= */
+// [네트워크] homing 총알은 발사 시점에 목표를 하나 정해 targetId로 못박는다 — 그래야 여러 명이 붙어있는
+// FFA에서도 "누구를 노리고 쏜 총알인지"가 명확해지고, 나중에 막타 판정도 그 총알의 ownerId로 정확히 귀속된다.
+function findHomingTarget(dir){
+  let best=null, bestDot=-1;
+  Object.values(remotePlayers).forEach(rp=>{
+    if(!rp.connected || !rp.alive) return;
+    const toRp=new THREE.Vector3(rp.x-camera.position.x, (rp.y||0)+0.9-camera.position.y, rp.z-camera.position.z).normalize();
+    const dot=toRp.dot(dir);
+    if(dot>bestDot){ bestDot=dot; best=rp.id; }
+  });
+  return best;
+}
+
 function tryShoot(){
-  if(!local.alive || local.reloading || local.fireCooldown>0) return;
+  if(!local.alive || local.reloading || local.fireCooldown>0 || weaponPickerOpen || local.empTimer>0) return;
+  if(aug.infiniteAmmo) local.ammo=maxAmmoC(); // [패시브] 무한탄창 — 발사 직전 항상 가득 채운다
   if(local.ammo<=0){ tryReload(); return; }
 
-  local.ammo--;
+  const w=curWeapon();
+  if(!aug.infiniteAmmo) local.ammo--;
   local.fireCooldown=fireIntervalC();
   AudioSys.shoot();
   flashCrosshair();
   cameraShake(0.05,0.12);
 
   let dmg=dmgC();
-  if(aug.instaKillChance && Math.random()<0.99) dmg=9999;
 
-  const dir=aimDirection();
-  const origin=camera.position.clone().addScaledVector(dir,0.7);
+  const baseDir=aimDirection();
+  const origin=camera.position.clone().addScaledVector(baseDir,0.7);
   origin.y -= 0.15;
   spawnMuzzleFlash(origin);
-  spawnBullet(origin, dir, 'me', dmg, {homing:aug.homing, ricochet:aug.ricochet});
 
-  if(conn && conn.open) conn.send({t:'shot', x:origin.x, y:origin.y, z:origin.z, dx:dir.x, dy:dir.y, dz:dir.z, dmg, homing:aug.homing, ricochet:aug.ricochet});
-  if(local.ammo===0) tryReload();
+  // [무기 시스템/패시브] 샷건화는 무기 종류와 무관하게 항상 5발 산탄으로 강제한다
+  const pelletCount = aug.shotgunize ? 5 : (w.pellets||1);
+  const spread = aug.shotgunize ? Math.max(w.spread,0.09) : w.spread;
+  const dirs=[];
+  for(let i=0;i<pelletCount;i++){
+    const d=baseDir.clone();
+    if(spread>0){
+      d.x += (Math.random()*2-1)*spread;
+      d.y += (Math.random()*2-1)*spread*0.6;
+      d.z += (Math.random()*2-1)*spread;
+      d.normalize();
+    }
+    dirs.push(d);
+  }
+  const targetId = aug.homing ? findHomingTarget(baseDir) : null;
+  // [패시브] 폭발탄은 스플래시가 없는 무기에도 강제로 스플래시를 붙인다
+  const splash = w.splash || (aug.explosiveRounds ? 3.2 : 0);
+  const bulletOpts={
+    homing:aug.homing, ricochet:aug.ricochet, targetId, speed:w.bulletSpeed, splash,
+    projSize:w.projSize, weaponColor:w.color,
+    pierce:aug.piercing, poison:aug.poison, boomerang:aug.boomerang, origin:origin.clone()
+  };
+  dirs.forEach(d=> spawnBullet(origin, d, myId, dmg, bulletOpts));
+
+  const msg={t:'shot', id:myId, x:origin.x, y:origin.y, z:origin.z, dirs:dirs.map(d=>({x:d.x,y:d.y,z:d.z})), dmg,
+    homing:aug.homing, ricochet:aug.ricochet, targetId, speed:w.bulletSpeed, splash, projSize:w.projSize, weaponColor:w.color,
+    pierce:aug.piercing, poison:aug.poison, boomerang:aug.boomerang};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+  if(!aug.infiniteAmmo && local.ammo===0) tryReload();
 }
 
-function tryDeathBeam(){
-  if(!aug.deathBeam) return;
-  if(!local.alive || gamePaused || gameOver || augmentOpen || !pointerLocked) return;
-  if(deathBeamCD>0) return;
-  deathBeamCD=1;
-  AudioSys.beam();
-  cameraShake(0.1,0.22);
+/* =========================================================
+   [조작] 액티브 스킬 — 배정된 키를 누르면 쿨타임 확인 후 발동
+   ========================================================= */
+function tryActivateSkillByKey(key){
+  if(!local.alive || gamePaused || gameOver || augmentOpen || weaponPickerOpen || !pointerLocked || local.empTimer>0) return;
+  const skill = activeSkills.find(s=>s.key===key);
+  if(!skill || skill.cd>0) return;
+  skill.cd = skill.cdMax;
+  skill.activate();
+}
 
+/* [네트워크] 특정 상대 한 명에게만 메시지를 보내는 헬퍼 — star topology라 guest는 host를 거쳐 중계된다.
+   EMP/접촉데미지/즉사 판정처럼 "이 사람에게만 정확히" 적용돼야 하는 스킬에 쓰인다. */
+function sendToPlayer(targetId, data){
+  if(targetId===myId){ handlePeerMessage(data, myId); return; }
+  if(isHost){
+    const c=hostConns[targetId];
+    if(c && c.open) c.send(data);
+  } else if(hostConn && hostConn.open){
+    hostConn.send({t:'relay', targetId, payload:data});
+  }
+}
+function findNearestRemote(){
+  let best=null, bd=Infinity;
+  Object.values(remotePlayers).forEach(rp=>{
+    if(!rp.connected || !rp.alive) return;
+    const d=Math.hypot(rp.x-local.x, rp.z-local.z);
+    if(d<bd){ bd=d; best=rp; }
+  });
+  return best;
+}
+function pointLineDistance(p, a, dir){
+  const ap=p.clone().sub(a);
+  const t=Math.max(0, ap.dot(dir));
+  const closest=a.clone().addScaledVector(dir,t);
+  return {dist:p.distanceTo(closest), t};
+}
+
+// [3-데스빔 버그 수정] 예전엔 느린 투사체+좁은 판정 반경이라 스치기만 해도 빗나갔다.
+// 지금은 발동 즉시 카메라 위치→조준방향 레이(ray)에 대해 넉넉한 두께(THRESHOLD)로 각 상대와의
+// 최단거리를 계산하는 완전한 히트스캔 방식이고, 명중 시 대상에게 직접 즉사 메시지를 보내
+// (self-authoritative) 네트워크상 즉사 판정 누락 문제도 함께 해결한다.
+function activateDeathBeam(){
   const dir=aimDirection();
-  const origin=camera.position.clone().addScaledVector(dir,0.7);
-  origin.y -= 0.15;
-  spawnMuzzleFlash(origin);
-  const opts={beam:true, speed:230, life:1.0};
-  spawnBullet(origin, dir, 'me', 9999, opts);
+  const origin=camera.position.clone();
+  const THRESHOLD=1.8; // 레이캐스터 두께를 넉넉하게
+  const MAXRANGE=220;
+  let best=null, bestT=Infinity;
+  Object.values(remotePlayers).forEach(rp=>{
+    if(!rp.connected || !rp.alive) return;
+    const p=new THREE.Vector3(rp.x, rp.y+0.9, rp.z);
+    const {dist,t}=pointLineDistance(p, origin, dir);
+    if(t>0 && t<MAXRANGE && dist<THRESHOLD && t<bestT){ bestT=t; best=rp; }
+  });
+  AudioSys.beam(); cameraShake(0.12,0.24);
+  const muzzle=origin.clone().addScaledVector(dir,0.7);
+  spawnMuzzleFlash(muzzle);
+  spawnBullet(muzzle, dir, myId, 9999, {beam:true, speed:400, life:0.35, weaponColor:0xdfffff});
+  const msg={t:'shot', id:myId, x:muzzle.x, y:muzzle.y, z:muzzle.z, dirs:[{x:dir.x,y:dir.y,z:dir.z}], dmg:9999, beam:true, speed:400};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+  if(best) sendToPlayer(best.id, {t:'instakill', ownerId:myId});
+}
 
-  if(conn && conn.open) conn.send({t:'shot', x:origin.x, y:origin.y, z:origin.z, dx:dir.x, dy:dir.y, dz:dir.z, dmg:9999, beam:true});
+function activateQuantumDash(){
+  const dir=aimDirection();
+  const dist=14;
+  local.x = Math.max(-ARENA+1, Math.min(ARENA-1, local.x+dir.x*dist));
+  local.z = Math.max(-ARENA+1, Math.min(ARENA-1, local.z+dir.z*dist));
+  AudioSys.blink(); cameraShake(0.1,0.2);
+}
+
+function activateReflectShield(){
+  local.reflectTimer=3.0;
+  AudioSys.blink();
+}
+
+function activateBlackhole(){
+  const id='gw'+Math.floor(Math.random()*1e9);
+  const well={id, x:local.x, z:local.z, radius:14, strength:16, expireAt:performance.now()+3500, ownerId:myId};
+  gravWells.push(well);
+  spawnGravWellVisual(well.x, well.z, 3500);
+  const msg={t:'gravwell', id, x:well.x, z:well.z, radius:well.radius, strength:well.strength, duration:3500, ownerId:myId};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+  AudioSys.beam(); cameraShake(0.1,0.3);
+}
+
+function activatePosSwap(){
+  const nearest=findNearestRemote();
+  if(!nearest) return;
+  local.x=nearest.x; local.z=nearest.z;
+  AudioSys.blink(); cameraShake(0.1,0.2);
+}
+
+function activateMine(){
+  const id='mn'+Math.floor(Math.random()*1e9);
+  const msg={t:'mine', id, x:local.x, z:local.z, ownerId:myId};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+  spawnMineLocal(id, local.x, local.z, myId);
+  AudioSys.reload();
+}
+function spawnMineLocal(id,x,z,ownerId){
+  if(mines.find(m=>m.id===id)) return;
+  const mat=new THREE.MeshStandardMaterial({color:0x2a0f10, emissive:0xff3b4d, emissiveIntensity:1.6, metalness:0.4, roughness:0.5});
+  const mesh=new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.6,0.28,14), mat);
+  mesh.position.set(x,0.15,z);
+  scene.add(mesh);
+  const light=new THREE.PointLight(0xff3b4d,1.2,5); light.position.set(x,0.4,z); scene.add(light);
+  mines.push({id,x,z,r:1.6,mesh,light,ownerId,armAt:performance.now()+900});
+}
+function removeMine(id){
+  const idx=mines.findIndex(m=>m.id===id);
+  if(idx<0) return;
+  const m=mines[idx];
+  scene.remove(m.mesh); scene.remove(m.light);
+  mines.splice(idx,1);
+}
+
+function activateInvisible(){
+  local.invisTimer=4.0;
+  AudioSys.blink();
+}
+
+function activateJumpBoost(){
+  local.vy=JUMP_SPEED*1.6;
+  AudioSys.jump(); cameraShake(0.06,0.12);
+}
+
+function activateEmp(){
+  const nearest=findNearestRemote();
+  if(!nearest) return;
+  sendToPlayer(nearest.id, {t:'emp', duration:4.0});
+  AudioSys.spark(); cameraShake(0.08,0.16);
+}
+
+function activateHealPulse(){
+  local.health=Math.min(maxHP(), local.health+35);
+  AudioSys.pickAugment(); cameraShake(0.05,0.1);
 }
 
 function flashCrosshair(){
@@ -964,14 +1461,18 @@ function flashCrosshair(){
 }
 
 function tryReload(){
-  if(local.reloading || local.ammo===maxAmmoC() || !local.alive) return;
+  if(local.reloading || local.ammo===maxAmmoC() || !local.alive || weaponPickerOpen) return;
   local.reloading=true;
+  local.reloadStart=performance.now();
+  local.reloadDuration=reloadTimeC()*1000;
   AudioSys.reload();
   $('reloadIndicator').style.display='block';
+  $('reloadRingWrap').style.display='flex';
   setTimeout(()=>{
     local.ammo=maxAmmoC(); local.reloading=false;
     $('reloadIndicator').style.display='none';
-  }, reloadTimeC()*1000);
+    $('reloadRingWrap').style.display='none';
+  }, local.reloadDuration);
 }
 
 function spawnSparks(pos, color){
@@ -992,7 +1493,7 @@ function updateParticles(dt){
   for(let i=particles.length-1;i>=0;i--){
     const p=particles[i];
     p.life-=dt;
-    p.vel.y-=9*dt;
+    if(!p.noGravity) p.vel.y-=9*dt;
     p.mesh.position.addScaledVector(p.vel,dt);
     p.mesh.material.opacity=Math.max(0,p.life/p.maxLife);
     const s=Math.max(0.1,p.life/p.maxLife);
@@ -1010,12 +1511,13 @@ function triggerHitmarker(){
   hitmarkerTimeout=setTimeout(()=>hm.classList.remove('show'), 200);
 }
 
-function spawnBullet(pos,dir,owner,dmg,opts){
+function spawnBullet(pos,dir,ownerId,dmg,opts){
   opts=opts||{};
   const beam=!!opts.beam;
-  let color = owner==='me'? 0xffee55 : 0xff3b4d;
-  if(beam) color = owner==='me' ? 0xdfffff : 0xff2fe0;
-  const sphR = beam?0.17:0.1;
+  const mine = ownerId===myId;
+  let color = opts.weaponColor!==undefined ? opts.weaponColor : (mine? 0xffee55 : 0xff3b4d);
+  if(beam) color = mine ? 0xdfffff : 0xff2fe0;
+  const sphR = beam?0.17:(opts.projSize||0.1);
   const mesh=new THREE.Mesh(new THREE.SphereGeometry(sphR,8,8), new THREE.MeshStandardMaterial({color, emissive:color, emissiveIntensity:2.4}));
   mesh.position.copy(pos);
   const trailLen=beam?2.4:1.4;
@@ -1026,9 +1528,13 @@ function spawnBullet(pos,dir,owner,dmg,opts){
   const light=new THREE.PointLight(color,beam?2.2:1.1,beam?10:6);
   mesh.add(light);
   bullets.push({
-    mesh,trail,dir:dir.clone(),speed:opts.speed||(beam?230:78),
-    life:opts.life||(beam?1.0:2.1), owner,dmg,trailLen,
-    homing:!!opts.homing, ricochet:!!opts.ricochet, beam, bounced:false, age:0
+    // ownerId = 발사한 유저의 PeerJS id. 막타 판정(누가 죽였는지)이 전부 이 값 하나로 결정된다.
+    // [무기 시스템/타격감] 총알 속도를 전 무기에 걸쳐 기존(78) 대비 2.5~4배로 대폭 상향했다.
+    mesh,trail,dir:dir.clone(),speed:opts.speed||(beam?230:210),
+    life:opts.life||(beam?1.0:2.1), ownerId,dmg,trailLen, splash:opts.splash||0,
+    homing:!!opts.homing, ricochet:!!opts.ricochet, targetId:opts.targetId||null, beam, bounced:false, age:0,
+    pierce:!!opts.pierce, poison:!!opts.poison, boomerang:!!opts.boomerang, returning:false,
+    originPos:opts.origin?opts.origin.clone():pos.clone(), hitLocalOnce:false
   });
 }
 function alignToDir(obj,dir){
@@ -1042,16 +1548,26 @@ function updateBullets(dt){
     const b=bullets[i];
     b.age += dt;
 
-    // homing: steer gradually toward the intended target
-    if(b.homing){
-      const targetAlive = b.owner==='me' ? remote.alive : local.alive;
-      if(targetAlive){
-        const tp = b.owner==='me'
-          ? new THREE.Vector3(remote.x, (remote.y||0)+0.9, remote.z)
-          : new THREE.Vector3(local.x, local.y+0.9, local.z);
+    // homing: steer gradually toward the target locked in at spawn time (b.targetId)
+    if(b.homing && b.targetId){
+      let tp=null;
+      if(b.targetId===myId && local.alive){
+        tp=new THREE.Vector3(local.x, local.y+0.9, local.z);
+      } else {
+        const rp=remotePlayers[b.targetId];
+        if(rp && rp.alive) tp=new THREE.Vector3(rp.x, (rp.y||0)+0.9, rp.z);
+      }
+      if(tp){
         const toTarget=tp.clone().sub(b.mesh.position).normalize();
         b.dir.lerp(toTarget, Math.min(1, dt*2.4)).normalize();
       }
+    }
+
+    // [패시브] 부메랑탄 — 일정 시간 날아간 뒤 발사자 쪽으로 방향을 뒤집어 되돌아온다
+    if(b.boomerang && !b.returning && b.age>0.42){
+      b.dir.negate();
+      b.returning=true;
+      b.life += 1.0;
     }
 
     b.mesh.position.addScaledVector(b.dir,b.speed*dt);
@@ -1067,9 +1583,12 @@ function updateBullets(dt){
       spawnSparks(b.mesh.position.clone(), 0xffaa55);
     }
 
-    // obstacle collision — blocks the bullet (or bounces once with the ricochet augment)
-    if(!hit && b.age>0.04){
+    // obstacle collision — blocks the bullet (or bounces once with ricochet, or ignored entirely with piercing)
+    if(!hit && b.age>0.04 && !b.pierce){
       for(const o of OBSTACLES){
+        // [맵 버그 수정] 총알의 높이가 장애물 실제 높이(o.h)를 넘었다면 막지 않는다 — 벽 위로 넘어가서
+        // 쏘는 사격도 이제 정상적으로 통과한다.
+        if(b.mesh.position.y >= o.h-0.05) continue;
         const dx=b.mesh.position.x-o.x, dz=b.mesh.position.z-o.z;
         const dist=Math.sqrt(dx*dx+dz*dz);
         if(dist<o.r+0.14 && dist>0.0001){
@@ -1091,25 +1610,47 @@ function updateBullets(dt){
       }
     }
 
-    // enemy bullet hitting me: authoritative damage
-    if(!hit && b.owner==='enemy' && local.alive && !gamePaused){
+    // someone else's bullet hitting me: authoritative damage — I (the victim) am the source of
+    // truth for my own health, and I carry the shooter's ownerId forward as the killer's identity.
+    // 스플래시 무기(로켓)는 직격 데미지를 여기서 주지 않는다 — 아래 explosion 처리로 일원화해서 중복 데미지를 막는다.
+    // [패시브] 관통탄은 나를 맞춰도 총알이 사라지지 않는다(hit을 세우지 않음) — 대신 hitLocalOnce로 중복 데미지를 막는다.
+    if(!hit && b.ownerId!==myId && local.alive && !gamePaused && !b.hitLocalOnce){
+      const hitR = 1.5*(local.sizeScale||1);
       const dx=b.mesh.position.x-local.x, dz=b.mesh.position.z-local.z, dy=b.mesh.position.y-(1.0+local.y);
-      if(dx*dx+dz*dz+dy*dy < 1.5*1.5){
-        hit=true;
+      if(dx*dx+dz*dz+dy*dy < hitR*hitR){
         spawnSparks(b.mesh.position.clone(), 0xff5555);
-        applyDamageToLocal(b.dmg);
+        if(!b.splash) applyDamageToLocal(b.dmg, b.ownerId);
+        if(b.poison && local.alive){
+          // [패시브] 독성탄 — 지속 피해(DOT)를 새로 덮어씌운다
+          local.poisonTimer=3.0; local.poisonDps=Math.max(3, Math.round(b.dmg*0.15)); local.poisonSourceId=b.ownerId;
+        }
+        b.hitLocalOnce=true;
+        if(!b.pierce) hit=true;
       }
     }
 
-    // my bullet reaching the enemy: local visual confirmation (hitmarker/sfx) —
-    // actual damage stays authoritative on the defender's own client
-    if(!hit && b.owner==='me' && remote.connected && remote.alive){
-      const dx=b.mesh.position.x-remote.x, dz=b.mesh.position.z-remote.z, dy=b.mesh.position.y-(1.0+(remote.y||0));
-      if(dx*dx+dz*dz+dy*dy < 1.5*1.5){
-        hit=true;
-        spawnSparks(b.mesh.position.clone(), 0xffffff);
-        triggerHitmarker();
+    // my bullet reaching any other player: local visual confirmation (hitmarker/sfx) —
+    // actual damage stays authoritative on the defender's own client, and the kill credit itself
+    // is settled centrally by the HOST once the victim reports its ownerId (fixes the killscore bug)
+    if(!hit && b.ownerId===myId){
+      for(const rp of Object.values(remotePlayers)){
+        if(!rp.connected || !rp.alive) continue;
+        const hitR = 1.5*(rp.sizeScale||1);
+        const dx=b.mesh.position.x-rp.x, dz=b.mesh.position.z-rp.z, dy=b.mesh.position.y-(1.0+(rp.y||0));
+        if(dx*dx+dz*dz+dy*dy < hitR*hitR){
+          spawnSparks(b.mesh.position.clone(), 0xffffff);
+          triggerHitmarker();
+          if(aug.vampire) local.health=Math.min(maxHP(), local.health+Math.max(1,Math.round(b.dmg*0.25))); // [패시브] 뱀파이어
+          if(!b.pierce) hit=true;
+          break;
+        }
       }
+    }
+
+    // [무기 시스템] 로켓 런처 / 폭발탄 — 벽/장애물/직격 등 어떤 이유로든 총알이 멈추면 그 지점에서 폭발,
+    // 폭발 반경(b.splash) 안에 있으면 나 스스로 거리 기반 감쇠 데미지를 적용한다(자기 폭사 포함)
+    if(hit && b.splash>0){
+      applyExplosionAt(b.mesh.position.clone(), b.splash, b.dmg, b.ownerId);
     }
 
     if(hit || b.life<=0){
@@ -1119,17 +1660,73 @@ function updateBullets(dt){
   }
 }
 
-function applyDamageToLocal(dmg){
+function applyExplosionAt(pos, radius, dmg, ownerId){
+  spawnSparks(pos.clone(), 0xffaa33);
+  cameraShake(0.14,0.24);
+  if(!local.alive) return;
+  const dist = pos.distanceTo(new THREE.Vector3(local.x, local.y+0.9, local.z));
+  if(dist < radius){
+    const falloff = 1 - dist/radius;
+    applyDamageToLocal(Math.round(dmg*Math.max(0.25,falloff)), ownerId);
+  }
+}
+function updateMines(dt, now){
+  mines.forEach(m=>{ m.mesh.rotation.y+=dt*1.5; });
+  if(!local.alive) return;
+  for(const m of mines){
+    if(now < m.armAt) continue;
+    const dx=local.x-m.x, dz=local.z-m.z;
+    if(dx*dx+dz*dz < m.r*m.r){
+      applyExplosionAt(new THREE.Vector3(m.x,0.3,m.z), 5.5, 45, m.ownerId);
+      const msg={t:'mineTrigger', id:m.id};
+      if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+      removeMine(m.id);
+      break;
+    }
+  }
+}
+function spawnGravWellVisual(x,z,duration){
+  const mat=new THREE.MeshBasicMaterial({color:0x8844ff, transparent:true, opacity:0.5});
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(0.9,12,12), mat);
+  mesh.position.set(x,1.0,z);
+  scene.add(mesh);
+  const light=new THREE.PointLight(0x8844ff,2.2,16);
+  light.position.set(x,1.0,z); scene.add(light);
+  const start=performance.now();
+  const anim=()=>{
+    const t=(performance.now()-start)/duration;
+    if(t>=1){ scene.remove(mesh); scene.remove(light); return; }
+    mesh.rotation.y+=0.12; mesh.scale.setScalar(1+Math.sin(t*20)*0.08);
+    requestAnimationFrame(anim);
+  };
+  anim();
+}
+
+function applyDamageToLocal(dmg, killerId){
   if(!local.alive) return;
   if(local.shieldTimer>0){
     AudioSys.blink();
     return;
   }
+  // [액티브] 반사실드 — 데미지를 무효화하고, 공격자의 마지막 위치를 향해 반격탄을 날린다
+  if(local.reflectTimer>0){
+    AudioSys.blink(); cameraShake(0.08,0.16);
+    const rp = remotePlayers[killerId];
+    if(rp && rp.alive){
+      const dir=new THREE.Vector3(rp.x-local.x, 0.3, rp.z-local.z).normalize();
+      const origin=new THREE.Vector3(local.x, local.y+1.0, local.z);
+      spawnBullet(origin, dir, myId, Math.max(15,Math.round(dmg*0.6)), {speed:260, weaponColor:0x88ffff});
+      const msg={t:'shot', id:myId, x:origin.x, y:origin.y, z:origin.z, dirs:[{x:dir.x,y:dir.y,z:dir.z}], dmg:Math.max(15,Math.round(dmg*0.6)), speed:260, weaponColor:0x88ffff};
+      if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+    }
+    return;
+  }
+  if(aug.heavyArmor) dmg*=0.8; // [유틸리티] 중장갑 — 받는 데미지 20% 감소
   local.health -= dmg;
   AudioSys.hit();
   triggerHitFlash();
-  cameraShake(0.16,0.32);
-  if(local.health<=0){ local.health=0; handleLocalDeath(); }
+  cameraShake(aug.heavyArmor?0.04:0.16, aug.heavyArmor?0.1:0.32); // [유틸리티] 중장갑 — 흔들림 거의 없음
+  if(local.health<=0){ local.health=0; handleLocalDeath(killerId); }
 }
 function triggerHitFlash(){
   const el=$('hitFlash');
@@ -1141,30 +1738,37 @@ function triggerHitFlash(){
 /* =========================================================
    DEATH / RESPAWN / AUGMENTS / GAME OVER
    ========================================================= */
-function handleLocalDeath(){
+function handleLocalDeath(killerId){
   if(gameOver) return;
   local.alive=false;
-  if(conn && conn.open) conn.send({t:'killed'});
+  reportKill(killerId);
   AudioSys.death();
-  showCenterMsg(true,'ELIMINATED','증강 선택 중...');
+  if(aug.kamikaze) triggerKamikaze(); // [유틸리티] 카미카제 — 사망 시 주변에 폭발 피해
+  showCenterMsg(true,'ELIMINATED','무기 선택 중...');
   $('deathOverlay').classList.add('show');
   gamePausedSet(true);
   if(document.pointerLockElement) document.exitPointerLock();
 
   setTimeout(()=>{
     if(gameOver) return;
-    openAugmentPicker('death');
+    openWeaponPicker(()=>{ openAugmentPicker('death'); });
   }, 1100);
+}
+function triggerKamikaze(){
+  const msg={t:'kamikaze', x:local.x, y:local.y, z:local.z, dmg:40, radius:6, ownerId:myId};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+  spawnSparks(new THREE.Vector3(local.x, local.y+0.5, local.z), 0xffaa33);
 }
 
 function finishRespawn(){
-  const spawn=pickSpawn(local.team);
+  // FFA에는 더 이상 고정 팀이 없으므로, 전체 스폰 풀(ALL_SPAWNS) 중 하나를 무작위로 고른다
+  const spawn=ALL_SPAWNS[Math.floor(Math.random()*ALL_SPAWNS.length)];
   local.x=spawn[0]; local.z=spawn[1];
-  local.yaw = local.team==='red'? Math.PI/2 : -Math.PI/2;
+  local.yaw = spawn[0]<0 ? Math.PI/2 : -Math.PI/2;
   local.camYaw = local.yaw; local.camPitch=0;
   local.speed=0;
   local.y=0; local.vy=0;
-  local.speedBoostTimer=0; local.shieldTimer=0;
+  local.speedBoostTimer=0; local.shieldTimer=0; local.reflectTimer=0; local.invisTimer=0; local.empTimer=0;
   local.health=maxHP();
   local.ammo=maxAmmoC();
   local.reloading=false;
@@ -1172,17 +1776,67 @@ function finishRespawn(){
   showCenterMsg(false);
   $('deathOverlay').classList.remove('show');
   gamePausedSet(false);
+  broadcastRespawn();
+}
+// [버그 수정 1] 부활 시 '상태(alive/invis 등)'와 '새 좌표'를 주기적인 50ms 스로틀(sendState)에 맡기지 않고
+// 즉시, 명시적으로 한 번 더 브로드캐스트한다. 수신부는 applyHardSync로 보간 목표뿐 아니라 현재 위치까지
+// 바로 맞춰서 "원래 자리에 멈춰있던" 상태가 그대로 남지 않게 한다.
+function broadcastRespawn(){
+  const msg={t:'respawn', id:myId, x:local.x, y:local.y, z:local.z, yaw:local.yaw, camYaw:local.camYaw,
+    health:local.health, alive:true, size:local.sizeScale, invis:false};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+  lastSend=performance.now(); // 다음 주기 상태 전송도 곧바로 이어지도록 타이머를 리셋
 }
 
-function onEnemyReportedKilled(){
-  local.kills++;
-  checkGameOver();
-  if(!gameOver && local.kills%3===0 && local.kills<10) openAugmentPicker('killstreak');
+/* =========================================================
+   [네트워크] 킬스코어 — HOST가 유일한 권위자
+   각 클라이언트는 자기 자신이 죽었을 때만 "누구의 총알(ownerId)에 맞았는지"를 알 수 있으므로,
+   죽은 사람이 killerId를 HOST에게 보고하면 HOST가 그 killerId 한 명의 킬 수만 정확히 올리고,
+   결과를 scores로 전원에게 다시 뿌린다. 예전처럼 "누구든 killed 메시지를 보내면 내 킬이 오른다"는
+   식의 오귀속 버그가 이제 구조적으로 발생할 수 없다.
+   ========================================================= */
+function reportKill(killerId){
+  if(!killerId) return; // 장애물/추락 등 환경사는 킬로 집계하지 않는다
+  if(isHost) hostRegisterKill(killerId);
+  else if(hostConn && hostConn.open) hostConn.send({t:'killed', killerId, victimId:myId});
 }
-function checkGameOver(){ if(!gameOver && local.kills>=10) endGame(true); }
-function checkDefeat(){ if(!gameOver && remote.kills>=10) endGame(false); }
+function hostRegisterKill(killerId){
+  if(killerId===myId){
+    local.kills++;
+    checkGameOverAll();
+    if(!gameOver && local.kills%3===0 && local.kills<10) openAugmentPicker('killstreak');
+  } else if(remotePlayers[killerId]){
+    remotePlayers[killerId].kills++;
+    checkGameOverAll();
+  } else {
+    return;
+  }
+  broadcastScores();
+}
+function broadcastScores(){
+  const scores={}; scores[myId]=local.kills;
+  Object.values(remotePlayers).forEach(rp=>{ scores[rp.id]=rp.kills; });
+  broadcastToAll({t:'scores', scores});
+}
+function applyScores(scores){
+  const prevKills=local.kills;
+  if(scores[myId]!==undefined) local.kills=scores[myId];
+  Object.keys(scores).forEach(id=>{
+    if(id===myId) return;
+    if(remotePlayers[id]) remotePlayers[id].kills=scores[id];
+  });
+  checkGameOverAll();
+  if(!gameOver && local.kills>prevKills && local.kills%3===0 && local.kills<10) openAugmentPicker('killstreak');
+}
+function checkGameOverAll(){
+  if(gameOver) return;
+  if(local.kills>=10){ endGame(true, null); return; }
+  for(const rp of Object.values(remotePlayers)){
+    if(rp.kills>=10){ endGame(false, rp.name); return; }
+  }
+}
 
-function endGame(won){
+function endGame(won, winnerName){
   gameOver=true;
   gamePausedSet(true);
   if(document.pointerLockElement) document.exitPointerLock();
@@ -1194,7 +1848,7 @@ function endGame(won){
   if(won) AudioSys.winSnd(); else AudioSys.loseSnd();
   $('resultTitle').textContent = won? 'VICTORY':'DEFEAT';
   $('resultTitle').className = won? 'win':'lose';
-  $('resultDesc').textContent = won? (myName+' — 10 KILLS ACHIEVED') : (enemyName+' WON THE MATCH');
+  $('resultDesc').textContent = won? (myName+' — 10 KILLS ACHIEVED') : ((winnerName||'상대방')+' WON THE MATCH');
   $('resultOverlay').classList.add('show');
 }
 
@@ -1203,6 +1857,49 @@ function showCenterMsg(v,title,sub){
   $('centerMsg').classList.toggle('show', v);
   if(title) $('centerMsg').querySelector('h2').textContent=title;
   if(sub) $('respawnText').textContent=sub;
+}
+
+/* =========================================================
+   [무기 시스템] 리스폰 무기 선택 — 선택 전엔 gamePaused=true라 조작/사격이 전부 막힌다
+   ========================================================= */
+let weaponPickerOpen=false;
+function openWeaponPicker(onDone){
+  weaponPickerOpen=true;
+  gamePausedSet(true);
+  if(document.pointerLockElement) document.exitPointerLock();
+  const wrap=$('weaponCards'); wrap.innerHTML='';
+  WEAPON_LIST.forEach(key=>{
+    const w=WEAPONS[key];
+    const el=document.createElement('div');
+    el.className='aug-card glass bracket';
+    el.innerHTML = `<div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+      <div class="aug-icon">${w.icon}</div><h3>${w.name}</h3><p>${w.desc}</p>`;
+    el.addEventListener('click', ()=>{
+      AudioSys.pickAugment();
+      applyWeapon(key);
+      weaponPickerOpen=false;
+      $('weaponOverlay').classList.remove('show');
+      if(onDone) onDone(); else gamePausedSet(false);
+    });
+    wrap.appendChild(el);
+  });
+  $('weaponOverlay').classList.add('show');
+}
+function applyWeapon(key){
+  local.weaponKey=key;
+  const w=WEAPONS[key];
+  local.ammo=maxAmmoC();
+  local.reloading=false;
+  local.fireCooldown=0;
+  $('reloadIndicator').style.display='none';
+  $('reloadRingWrap').style.display='none';
+  setCrosshairShape(w.crosshair);
+  $('ammoPips').dataset.max=''; // force pip row rebuild next HUD tick (ammo count changed)
+}
+function setCrosshairShape(shape){
+  const el=$('crosshair');
+  ['shape-cross','shape-circle','shape-dot','shape-diamond'].forEach(c=>el.classList.remove(c));
+  el.classList.add('shape-'+shape);
 }
 
 function openAugmentPicker(reason){
@@ -1214,18 +1911,29 @@ function openAugmentPicker(reason){
     ? 'ELIMINATED — 증강을 선택하고 부활하세요'
     : 'KILLSTREAK BONUS — 증강 선택';
 
-  const pool=[...AUGMENT_POOL];
+  // [중요] 이미 보유한 증강(ownedAugmentIds)은 후보 풀에서 완전히 제외한다 — 중복 등장 방지
+  const pool = AUGMENT_POOL.filter(a=>!ownedAugmentIds.includes(a.id));
   const picks=[];
-  for(let i=0;i<3 && pool.length;i++){ const idx=Math.floor(Math.random()*pool.length); picks.push(pool.splice(idx,1)[0]); }
+  const src=[...pool];
+  for(let i=0;i<3 && src.length;i++){ const idx=Math.floor(Math.random()*src.length); picks.push(src.splice(idx,1)[0]); }
+
   const wrap=$('augCards'); wrap.innerHTML='';
+  if(picks.length===0){
+    // 30가지를 모두 보유한 극단적인 경우 — 더 줄 게 없으니 그냥 진행시킨다
+    augmentOpen=false;
+    $('augmentOverlay').classList.remove('show');
+    if(reason==='death') finishRespawn(); else gamePausedSet(false);
+    return;
+  }
+  const typeTag={passive:'[패시브]', active:'[액티브]', utility:'[유틸리티]'};
   picks.forEach(card=>{
     const el=document.createElement('div');
     el.className='aug-card glass bracket';
     el.innerHTML = `<div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
-      <div class="aug-icon">${card.icon}</div><h3>${card.name}</h3><p>${card.desc}</p>`;
+      <div class="aug-icon">${card.icon}</div><h3>${card.name}</h3><p><span style="color:#7c8a97;letter-spacing:1px;">${typeTag[card.type]}</span> ${card.desc}</p>`;
     el.addEventListener('click', ()=>{
       AudioSys.pickAugment();
-      card.apply();
+      acquireAugment(card);
       local.health=Math.min(local.health, maxHP());
       augmentOpen=false;
       $('augmentOverlay').classList.remove('show');
@@ -1236,10 +1944,76 @@ function openAugmentPicker(reason){
   });
   $('augmentOverlay').classList.add('show');
 }
+// [증강 시스템] 실제 획득 처리 — id를 보유 목록에 넣어 재등장을 막고, 액티브면 남는 키를 순서대로 배정한다
+function acquireAugment(card){
+  ownedAugmentIds.push(card.id);
+  if(card.apply) card.apply();
+  if(card.type==='active'){
+    const key = ACTIVE_KEY_POOL[activeSkills.length % ACTIVE_KEY_POOL.length];
+    activeSkills.push({id:card.id, key, name:card.name, icon:card.icon, cdMax:card.cooldown, cd:0, activate:card.activate});
+  }
+}
 
 /* =========================================================
    HUD
    ========================================================= */
+function renderAmmoPips(){
+  const wrap=$('ammoPips');
+  const max=maxAmmoC();
+  if(wrap.dataset.max != String(max)){
+    wrap.innerHTML='';
+    for(let i=0;i<max;i++){ const p=document.createElement('div'); p.className='pip'; wrap.appendChild(p); }
+    wrap.dataset.max=String(max);
+  }
+  const kids=wrap.children;
+  for(let i=0;i<kids.length;i++) kids[i].classList.toggle('filled', i<local.ammo);
+}
+
+// [조작] 하단 중앙 액티브 스킬 바 — 아이콘 + 배정된 키 + 실시간 쿨타임을 표시한다
+function renderSkillBar(){
+  const wrap=$('skillBar');
+  if(wrap.children.length !== activeSkills.length){
+    wrap.innerHTML='';
+    activeSkills.forEach(s=>{
+      const el=document.createElement('div');
+      el.className='skill-slot';
+      el.dataset.id=s.id;
+      el.innerHTML=`<div class="sk-key">${s.key.toUpperCase()}</div><div class="sk-icon">${s.icon}</div><div class="sk-cd"></div>`;
+      wrap.appendChild(el);
+    });
+  }
+  activeSkills.forEach(s=>{
+    const el=wrap.querySelector(`[data-id="${s.id}"]`);
+    if(!el) return;
+    const ready=s.cd<=0;
+    el.classList.toggle('ready', ready);
+    if(!ready){
+      const pct=s.cd/s.cdMax;
+      el.querySelector('.sk-cd').textContent=Math.ceil(s.cd)+'s';
+      el.querySelector('.sk-cd').style.clipPath=`inset(0 0 ${100-pct*100}% 0)`;
+    }
+  });
+}
+
+// [패시브] 후방주의 — 후방 근접 반경 안에 살아있는 적이 있으면 경고를 띄운다
+function updateRearWarn(){
+  if(!aug.rearWarn){ $('rearWarn').classList.remove('show'); return; }
+  let warn=false;
+  Object.values(remotePlayers).forEach(rp=>{
+    if(!rp.connected || !rp.alive) return;
+    const dx=rp.x-local.x, dz=rp.z-local.z;
+    const dist=Math.hypot(dx,dz);
+    if(dist<14){
+      const angleToRp=Math.atan2(dx,dz);
+      let diff=angleToRp-local.yaw;
+      while(diff>Math.PI) diff-=Math.PI*2;
+      while(diff<-Math.PI) diff+=Math.PI*2;
+      if(Math.abs(diff)>2.2) warn=true; // 대략 진행 방향의 뒤쪽 반원
+    }
+  });
+  $('rearWarn').classList.toggle('show', warn);
+}
+
 function updateHUD(){
   const kmh=Math.round(Math.abs(local.speed)*11.5);
   $('speedNum').textContent=kmh;
@@ -1254,12 +2028,30 @@ function updateHUD(){
   $('ammoNum').textContent=local.ammo;
   $('ammoMax').textContent='/'+maxAmmoC();
 
-  $('sbMeScore').textContent=local.kills;
-  $('sbEnemyScore').textContent=remote.kills;
-  $('sbMeName').textContent=myName;
-  $('sbEnemyName').textContent=enemyName;
+  // [하이엔드 UI] 무기 아이콘/이름 + 낱개 탄창 핍 + 재장전 원형 프로그레스
+  const w=curWeapon();
+  $('wpnIcon').textContent=w.icon;
+  $('wpnName').textContent=w.name;
+  renderAmmoPips();
+  if(local.reloading){
+    const pct=Math.min(1,(performance.now()-local.reloadStart)/Math.max(1,local.reloadDuration));
+    $('rrFg').style.strokeDashoffset = String(100.53*(1-pct));
+  }
 
-  $('connLost').classList.toggle('show', !remote.connected && gameActive());
+  // compact top scoreboard: show ME vs whoever currently has the most kills among opponents;
+  // full breakdown of every player is available by holding TAB (see renderFullScoreboard)
+  let topEnemy=null;
+  Object.values(remotePlayers).forEach(rp=>{ if(!topEnemy || rp.kills>topEnemy.kills) topEnemy=rp; });
+  $('sbMeScore').textContent=local.kills;
+  $('sbEnemyScore').textContent=topEnemy? topEnemy.kills : 0;
+  $('sbMeName').textContent=myName;
+  $('sbEnemyName').textContent=topEnemy? topEnemy.name : '—';
+
+  const hostLinkLost = !isHost && (!hostConn || !hostConn.open);
+  $('connLost').classList.toggle('show', hostLinkLost && gameActive());
+  if($('fullScoreboard').classList.contains('show')) renderFullScoreboard();
+  renderSkillBar();
+  updateRearWarn();
 
   // compass: shows which way the kart is pointed relative to current camera aim
   let hdiff = local.yaw - local.camYaw;
@@ -1267,17 +2059,38 @@ function updateHUD(){
   while(hdiff<-Math.PI) hdiff+=Math.PI*2;
   $('compassArrow').style.transform = 'rotate(' + (hdiff*180/Math.PI) + 'deg)';
 
-  // death beam ability status
-  const abilEl=$('abilityStatus');
-  if(aug.deathBeam){
-    abilEl.style.display='block';
-    abilEl.textContent = 'Q: DEATH BEAM ' + (deathBeamCD>0 ? Math.ceil(deathBeamCD)+'s' : 'READY');
-  } else {
-    abilEl.style.display='none';
-  }
-
   $('speedFill').classList.toggle('boost', local.speedBoostTimer>0);
   $('shieldBadge').style.display = local.shieldTimer>0 ? 'block' : 'none';
+}
+
+/* =========================================================
+   [네트워크] FFA 전체 스코어보드 — TAB 키를 누르고 있는 동안 표시
+   ========================================================= */
+window.addEventListener('keydown', e=>{
+  if((e.key==='Tab'||e.code==='Tab') && gameActive() && !augmentOpen){
+    e.preventDefault();
+    showFullScoreboard(true);
+  }
+});
+window.addEventListener('keyup', e=>{
+  if(e.key==='Tab'||e.code==='Tab') showFullScoreboard(false);
+});
+function showFullScoreboard(v){
+  const el=$('fullScoreboard');
+  if(v) renderFullScoreboard();
+  el.classList.toggle('show', v);
+}
+function renderFullScoreboard(){
+  const rows=[{name:myName+' (ME)', kills:local.kills}];
+  Object.values(remotePlayers).forEach(rp=>rows.push({name:rp.name||'PLAYER', kills:rp.kills||0}));
+  rows.sort((a,b)=>b.kills-a.kills);
+  const wrap=$('fsRows'); wrap.innerHTML='';
+  rows.forEach((r,i)=>{
+    const row=document.createElement('div');
+    row.className='fs-row';
+    row.innerHTML=`<span class="fs-rank">#${i+1}</span><span class="fs-name">${escapeHtml(r.name)}</span><span class="fs-kills">${r.kills}</span>`;
+    wrap.appendChild(row);
+  });
 }
 
 /* =========================================================
@@ -1293,47 +2106,133 @@ function hostGame(){
   $('roomCodeDisplay').textContent=roomCode;
   $('hostStatus').textContent='신호 서버 연결 중...';
   isHost=true;
-  connectedGuestName=null;
+  hostConns={};
+  connectedGuests={};
+  roster={};
   updateHostPlayerListUI();
   peer=new Peer('kartmvp-'+roomCode, {debug:1});
-  peer.on('open', ()=>{ $('hostStatus').textContent='상대방 접속 대기 중...'; });
-  peer.on('connection', c=>{
-    // this build supports one opponent at a time — reject extras politely
-    if(conn && conn.open){ c.on('open', ()=>{ c.send({t:'full'}); setTimeout(()=>c.close(),200); }); return; }
-    conn=c;
-    setupConn();
+  peer.on('open', id=>{
+    myId=id;
+    roster[myId]={name:myName, colorIndex:0};
+    $('hostStatus').textContent='상대방 접속 대기 중...';
   });
-  peer.on('error', err=>{ $('hostStatus').textContent='연결 오류: '+err.type; });
+  peer.on('connection', c=>{
+    // [네트워크] Star Topology — host는 접속자 수 제한 없이 전부 받아들이고,
+    // hostConns={}에 등록해 스스로 중앙 서버(허브) 역할을 한다.
+    hostConns[c.peer]=c;
+    setupHostConn(c);
+  });
+  // [버그 수정 2] 에러 원인을 콘솔에 남기고 UI에도 사람이 읽을 수 있는 문구로 보여준다
+  peer.on('error', err=>{
+    console.error('[peerjs][host] error:', err.type, err);
+    let msg='연결 오류: '+err.type;
+    if(err.type==='unavailable-id') msg='이미 사용 중인 방 코드입니다. 다시 시도해주세요.';
+    else if(err.type==='network' || err.type==='server-error' || err.type==='socket-error' || err.type==='socket-closed') msg='신호 서버 연결이 불안정합니다. 네트워크 상태를 확인해주세요.';
+    $('hostStatus').textContent=msg;
+  });
+  peer.on('disconnected', ()=>{
+    console.warn('[peerjs][host] disconnected from signaling server, retrying...');
+    $('hostStatus').textContent='신호 서버와 연결이 끊겼습니다. 재연결 시도 중...';
+    if(peer && !peer.destroyed) peer.reconnect();
+  });
 }
 function joinGame(code){
-  $('joinStatus').textContent='접속 중...';
+  $('joinStatus').textContent='신호 서버에 연결 중...';
+  $('joinStatus').classList.add('pulse');
   $('joinWaitStatus').style.display='none';
+  isHost=false;
+  if(peer && !peer.destroyed) peer.destroy();
+  hostConn=null;
   peer=new Peer(undefined,{debug:1});
-  peer.on('open', ()=>{
-    conn=peer.connect('kartmvp-'+code, {reliable:true});
-    conn.on('open', ()=>{ setupConn(); });
-    conn.on('error', ()=>{ $('joinStatus').textContent='접속 실패: 방 코드를 확인하세요.'; });
+
+  // [버그 수정 2] peer.connect()는 신호(SDP) 교환만 시작할 뿐이라, 실제 데이터 채널이 열렸는지는
+  // 반드시 conn.on('open')으로만 확인한다. 그 전까지는 게임 화면으로 절대 넘어가지 않고
+  // "연결 중..." 문구를 유지해서 먹통이 아니라 진행 중임을 보여준다. 응답이 없을 경우를 대비해
+  // 타임아웃도 걸어둔다.
+  let settled=false;
+  const connectTimeout=setTimeout(()=>{
+    if(settled) return;
+    settled=true;
+    console.error('[peerjs][guest] connection to host timed out');
+    $('joinStatus').classList.remove('pulse');
+    $('joinStatus').textContent='연결 시간 초과 — 방 코드와 네트워크 상태를 확인해주세요.';
+    if(peer && !peer.destroyed) peer.destroy();
+  }, 12000);
+
+  peer.on('open', id=>{
+    myId=id;
+    $('joinStatus').textContent='호스트에 접속 시도 중...';
+    hostConn=peer.connect('kartmvp-'+code, {reliable:true});
+    hostConn.on('open', ()=>{
+      if(settled) return; // 이미 타임아웃으로 정리된 뒤라면 무시
+      settled=true;
+      clearTimeout(connectTimeout);
+      $('joinStatus').classList.remove('pulse');
+      setupGuestConn();
+    });
+    hostConn.on('error', err=>{
+      if(settled) return;
+      settled=true;
+      clearTimeout(connectTimeout);
+      console.error('[peerjs][guest] connection error:', err);
+      $('joinStatus').classList.remove('pulse');
+      $('joinStatus').textContent='접속 실패: 방 코드를 확인하세요.';
+    });
+    hostConn.on('close', ()=>{
+      if(!settled){
+        settled=true;
+        clearTimeout(connectTimeout);
+        $('joinStatus').classList.remove('pulse');
+        $('joinStatus').textContent='호스트와의 연결이 준비되기 전에 종료되었습니다. 다시 시도해주세요.';
+      }
+    });
   });
   peer.on('error', err=>{
-    $('joinStatus').textContent = err.type==='peer-unavailable' ? '방을 찾을 수 없습니다. 코드를 확인하세요.' : ('연결 오류: '+err.type);
+    if(settled) return;
+    settled=true;
+    clearTimeout(connectTimeout);
+    console.error('[peerjs][guest] peer error:', err.type, err);
+    $('joinStatus').classList.remove('pulse');
+    let msg = '연결 오류: '+err.type;
+    if(err.type==='peer-unavailable') msg='방을 찾을 수 없습니다. 코드를 확인하세요.';
+    else if(err.type==='network' || err.type==='server-error' || err.type==='socket-error' || err.type==='socket-closed') msg='신호 서버 연결이 불안정합니다. 네트워크 상태를 확인해주세요.';
+    $('joinStatus').textContent=msg;
   });
 }
-function setupConn(){
-  conn.on('data', handleData);
-  conn.on('close', ()=>{
-    remote.connected=false;
-    if(isHost && !started){ connectedGuestName=null; updateHostPlayerListUI(); }
+function setupHostConn(c){
+  c.on('data', d=>handlePeerMessage(d, c.peer));
+  c.on('close', ()=>{
+    console.log('[peerjs][host] guest disconnected:', c.peer);
+    delete hostConns[c.peer];
+    delete connectedGuests[c.peer];
+    delete roster[c.peer];
+    if(remotePlayers[c.peer]) remotePlayers[c.peer].connected=false;
+    if(!started) updateHostPlayerListUI();
   });
-  conn.on('error', ()=>{ remote.connected=false; });
-  conn.on('open', ()=>{ sendHello(); });
-  if(conn.open){ sendHello(); }
+  c.on('error', err=>{ console.error('[peerjs][host] connection error from', c.peer, err); });
+}
+function setupGuestConn(){
+  // [버그 수정 2] 이 함수는 hostConn.on('open')이 이미 발생한 뒤에만 호출된다(joinGame 참고).
+  // 그래서 여기서는 open 여부를 다시 확인할 필요 없이 바로 hello를 보낸다 — race condition 없음.
+  hostConn.on('data', d=>handlePeerMessage(d, 'host'));
+  hostConn.on('close', ()=>{
+    console.warn('[peerjs][guest] lost connection to host');
+    $('connLost').classList.add('show');
+  });
+  hostConn.on('error', err=>{ console.error('[peerjs][guest] connection error:', err); });
+  sendHello();
 }
 function sendHello(){
-  conn.send({t:'hello', name:myName});
-  if(!isHost){
-    $('joinStatus').textContent='';
-    $('joinWaitStatus').style.display='block';
-  }
+  hostConn.send({t:'hello', name:myName});
+  $('joinStatus').textContent='';
+  $('joinWaitStatus').style.display='block';
+}
+function registerGuest(id, name){
+  connectedGuests[id]=name||'GUEST';
+  if(!roster[id]) roster[id]={name:connectedGuests[id], colorIndex:Object.keys(roster).length};
+  else roster[id].name=connectedGuests[id];
+  updateHostPlayerListUI();
+  broadcastToAll({t:'roster', roster});
 }
 function updateHostPlayerListUI(){
   const list=$('playerList');
@@ -1341,15 +2240,18 @@ function updateHostPlayerListUI(){
   // show myself (host) always
   const meRow=document.createElement('div');
   meRow.className='player-row';
-  meRow.innerHTML=`<div class="dot"></div><div class="pname">${escapeHtml(myName)}</div><div class="ptag">HOST (RED)</div>`;
+  meRow.innerHTML=`<div class="dot"></div><div class="pname">${escapeHtml(myName)}</div><div class="ptag">HOST</div>`;
   list.appendChild(meRow);
 
-  if(connectedGuestName){
-    const guestRow=document.createElement('div');
-    guestRow.className='player-row';
-    guestRow.innerHTML=`<div class="dot"></div><div class="pname">${escapeHtml(connectedGuestName)}</div><div class="ptag">GUEST (BLUE)</div>`;
-    list.appendChild(guestRow);
-    $('hostStatus').textContent='플레이어 접속 완료 — 시작할 수 있습니다';
+  const guestIds=Object.keys(connectedGuests);
+  if(guestIds.length){
+    guestIds.forEach(id=>{
+      const row=document.createElement('div');
+      row.className='player-row';
+      row.innerHTML=`<div class="dot"></div><div class="pname">${escapeHtml(connectedGuests[id])}</div><div class="ptag">GUEST</div>`;
+      list.appendChild(row);
+    });
+    $('hostStatus').textContent=guestIds.length+'명 접속 완료 — 시작할 수 있습니다';
     $('btnStartMatch').style.display='block';
   } else {
     const empty=document.createElement('div');
@@ -1362,77 +2264,247 @@ function updateHostPlayerListUI(){
 }
 function escapeHtml(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 function hostBeginMatch(){
-  if(!conn || !conn.open || started) return;
+  if(started || Object.keys(connectedGuests).length===0) return;
   mapSeed = Math.floor(Math.random()*1e9);
-  conn.send({t:'start', seed:mapSeed});
+  // [버그 수정 1] 여기서 브로드캐스트가 실패해도(연결이 끊긴 guest 등) startMatch()는 반드시 실행되어야
+  // Host 자신은 정상적으로 게임에 진입한다 — 이 순서가 뒤집혀 있으면 Host가 로비에 멈춰버릴 수 있다.
+  try{ broadcastToAll({t:'start', seed:mapSeed, roster}); }
+  catch(err){ console.error('[network] start broadcast failed:', err); }
   startMatch();
 }
-function handleData(data){
+
+/* [네트워크] Star Topology 릴레이 헬퍼 — host만 사용한다.
+   [버그 수정] 연결 하나가 죽어있어도(끊김/에러) 나머지 전송과 Host 자신의 진행에는 영향이 없도록
+   각 전송을 개별적으로 try/catch로 감싼다. */
+function broadcastToAll(data){
+  Object.values(hostConns).forEach(c=>{
+    try{ if(c && c.open) c.send(data); }
+    catch(err){ console.error('[network] broadcast to a peer failed:', err); }
+  });
+}
+function relayToOthers(fromId, data){
+  Object.keys(hostConns).forEach(id=>{
+    if(id===fromId) return;
+    const c=hostConns[id];
+    try{ if(c && c.open) c.send(data); }
+    catch(err){ console.error('[network] relay to a peer failed:', err); }
+  });
+}
+
+function applyRemoteState(id, data){
+  if(id===myId) return;
+  const rp=remotePlayers[id];
+  if(!rp) return;
+  rp.connected=true;
+  rp.tx=data.x; rp.ty=data.y||0; rp.tz=data.z; rp.tyaw=data.yaw;
+  rp.turretYaw=data.camYaw!==undefined?data.camYaw:data.yaw;
+  rp.alive=data.alive; rp.health=data.health;
+  rp.sizeScale=data.size||1; rp.invis=!!data.invis;
+}
+// [버그 수정] 부활/스냅샷처럼 "즉시 정확한 위치로 튀어야" 하는 갱신은 보간 목표(tx/tz)뿐 아니라
+// 현재 위치(x/z)까지 함께 강제로 맞춰서, 죽어있던 동안 멈춰있던 좌표가 그대로 남지 않게 한다.
+function applyHardSync(id, data){
+  if(id===myId) return;
+  const rp=remotePlayers[id];
+  if(!rp) return;
+  rp.connected=true;
+  rp.x=data.x; rp.z=data.z; rp.y=data.y||0;
+  rp.tx=data.x; rp.tz=data.z; rp.ty=data.y||0;
+  rp.yaw=data.yaw; rp.tyaw=data.yaw;
+  rp.turretYaw=data.camYaw!==undefined?data.camYaw:data.yaw;
+  rp.alive=data.alive; rp.health=data.health;
+  rp.sizeScale=data.size||1; rp.invis=!!data.invis;
+}
+function applyRoster(r){ roster=r; }
+
+/* [네트워크] 모든 P2P 메시지가 여기로 모인다. host는 필요한 메시지를 다른 guest들에게 릴레이해서
+   1:N 스타 토폴로지(guest끼리는 직접 연결되지 않고 반드시 host를 거친다)를 완성한다. */
+function handlePeerMessage(data, fromId){
   switch(data.t){
     case 'hello':
-      enemyName=data.name||'ENEMY'; remote.connected=true;
-      if(isHost && !started){ connectedGuestName=data.name||'GUEST'; updateHostPlayerListUI(); }
+      if(isHost && !started) registerGuest(fromId, data.name);
+      break;
+    case 'roster':
+      if(!isHost) applyRoster(data.roster);
       break;
     case 'start':
-      if(!isHost && !started){ mapSeed=data.seed; startMatch(); }
-      break;
-    case 'full':
-      $('joinStatus').textContent='방이 이미 가득 찼습니다.';
+      if(!isHost && !started){ mapSeed=data.seed; if(data.roster) roster=data.roster; startMatch(); }
       break;
     case 'state':
-      remote.connected=true;
-      remote.tx=data.x; remote.ty=data.y||0; remote.tz=data.z; remote.tyaw=data.yaw;
-      remote.turretYaw=data.camYaw!==undefined?data.camYaw:data.yaw;
-      remote.kills=data.kills; remote.alive=data.alive; remote.health=data.health;
-      checkDefeat();
+      // [버그 수정] 게스트 쪽에서는 hostConn으로 들어오는 모든 메시지의 fromId가 항상 'host' 고정 문자열이라
+      // (직접 온 것이든 다른 게스트로부터 릴레이된 것이든 구분이 안 됨) remotePlayers[fromId]가 절대 못 찾아졌다.
+      // 메시지 안에 실려있는 실제 발신자 id(data.id)로 식별해야 한다 — 이게 "다른 플레이어가 원래 스폰
+      // 위치에 멈춰있는" 동기화 버그의 진짜 원인이었다.
+      applyRemoteState(data.id, data);
+      if(isHost) relayToOthers(fromId, data);
       break;
-    case 'shot': spawnBullet(new THREE.Vector3(data.x,data.y,data.z), new THREE.Vector3(data.dx,data.dy,data.dz), 'enemy', data.dmg, {homing:data.homing, ricochet:data.ricochet, beam:data.beam}); break;
-    case 'killed': onEnemyReportedKilled(); break;
+    // [버그 수정 1] 부활 패킷 — 즉시, 강제로(보간 없이) 새 좌표/생존 상태를 반영한다
+    case 'respawn':
+      applyHardSync(data.id, data);
+      if(isHost) relayToOthers(fromId, data);
+      break;
+    // [버그 수정 2] host가 주기적으로 뿌리는 전체 상태 스냅샷 — 특정 패킷이 유실돼도 몇 초 안에 자동 복구된다
+    case 'snapshot':
+      if(!isHost && data.players){
+        Object.keys(data.players).forEach(id=>{ applyHardSync(id, data.players[id]); });
+      }
+      break;
+    case 'shot':
+      (data.dirs||[{x:data.dx,y:data.dy,z:data.dz}]).forEach(d=>{
+        spawnBullet(new THREE.Vector3(data.x,data.y,data.z), new THREE.Vector3(d.x,d.y,d.z), data.id, data.dmg,
+          {homing:data.homing, ricochet:data.ricochet, beam:data.beam, targetId:data.targetId, speed:data.speed, splash:data.splash, projSize:data.projSize, weaponColor:data.weaponColor,
+           pierce:data.pierce, poison:data.poison, boomerang:data.boomerang, origin:new THREE.Vector3(data.x,data.y,data.z)});
+      });
+      if(isHost) relayToOthers(fromId, data);
+      break;
+    case 'killed':
+      if(isHost) hostRegisterKill(data.killerId);
+      break;
+    case 'scores':
+      if(!isHost) applyScores(data.scores);
+      break;
+    case 'airdrop':
+      if(!isHost) spawnAirdropLocal(data.id, data.x, data.z);
+      break;
+    case 'airdropTaken':
+      if(!isHost) removeAirdrop(data.id);
+      else relayToOthers(fromId, data);
+      break;
+
+    // [조작/증강] 특정 대상 한 명에게만 가는 메시지를 host가 실제 목적지로 다시 전달한다
+    case 'relay':
+      if(data.targetId===myId) handlePeerMessage(data.payload, fromId);
+      else if(isHost){ const c=hostConns[data.targetId]; if(c && c.open) c.send(data.payload); }
+      break;
+    // [3-데스빔 버그 수정] 명중 시 대상에게 직접 즉사를 통보 — 대상 본인이 스스로 사망 처리하므로 판정 누락이 없다
+    case 'instakill':
+      if(local.alive) applyDamageToLocal(9999, data.ownerId);
+      break;
+    // [패시브] 고슴도치 접촉 데미지
+    case 'contactDamage':
+      if(local.alive) applyDamageToLocal(data.dmg, data.ownerId);
+      break;
+    // [액티브] EMP — 대상 본인이 자기 조작을 잠시 잠근다
+    case 'emp':
+      local.empTimer = Math.max(local.empTimer, data.duration);
+      break;
+    // [액티브] 지뢰매설 — host가 좌표를 정하고 전원이 각자 접촉 여부를 판정한다
+    case 'mine':
+      spawnMineLocal(data.id, data.x, data.z, data.ownerId);
+      if(isHost) relayToOthers(fromId, data);
+      break;
+    case 'mineTrigger':
+      removeMine(data.id);
+      if(isHost) relayToOthers(fromId, data);
+      break;
+    // [액티브] 블랙홀 — 전원이 각자 자신의 위치를 중심으로 끌어당긴다(자기 것은 제외)
+    case 'gravwell':
+      gravWells.push({id:data.id, x:data.x, z:data.z, radius:data.radius, strength:data.strength, expireAt:performance.now()+data.duration, ownerId:data.ownerId});
+      spawnGravWellVisual(data.x, data.z, data.duration);
+      if(isHost) relayToOthers(fromId, data);
+      break;
+    // [유틸리티] 카미카제 — 사망 지점 폭발, 전원이 각자 거리 기반으로 자기 피해를 계산
+    case 'kamikaze':
+      spawnSparks(new THREE.Vector3(data.x,(data.y||0)+0.5,data.z), 0xffaa33);
+      if(local.alive){
+        const dist=Math.hypot(local.x-data.x, local.z-data.z);
+        if(dist<data.radius) applyDamageToLocal(Math.round(data.dmg*(1-dist/data.radius)), data.ownerId);
+      }
+      if(isHost) relayToOthers(fromId, data);
+      break;
   }
 }
 let lastSend=0;
 function sendState(now){
-  if(!conn || !conn.open) return;
   if(now-lastSend<50) return;
   lastSend=now;
-  conn.send({t:'state', x:local.x, y:local.y, z:local.z, yaw:local.yaw, camYaw:local.camYaw, health:local.health, alive:local.alive, kills:local.kills});
+  const msg={t:'state', id:myId, x:local.x, y:local.y, z:local.z, yaw:local.yaw, camYaw:local.camYaw, health:local.health, alive:local.alive, size:local.sizeScale, invis:local.invisTimer>0};
+  if(isHost) broadcastToAll(msg);
+  else if(hostConn && hostConn.open) hostConn.send(msg);
+}
+
+// [버그 수정 2] host가 2초마다 "지금 내가 알고있는 전원의 상태"를 한 번에 뿌린다.
+// 개별 state/relay 패킷 하나가 어딘가에서 유실/누락되더라도, 이 스냅샷이 몇 초 안에
+// 좌표·생존여부·체력 등을 전부 강제로 재동기화해서 "특정 플레이어와 상호작용이 끊기는" 상태가
+// 영구적으로 남지 않도록 막아준다.
+let lastSnapshotAt=0;
+const SNAPSHOT_INTERVAL=2000;
+function hostBroadcastSnapshot(now){
+  if(!isHost || !started || gameOver) return;
+  if(now-lastSnapshotAt < SNAPSHOT_INTERVAL) return;
+  lastSnapshotAt=now;
+  const players={};
+  players[myId]={x:local.x,y:local.y,z:local.z,yaw:local.yaw,camYaw:local.camYaw,health:local.health,alive:local.alive,size:local.sizeScale,invis:local.invisTimer>0};
+  Object.values(remotePlayers).forEach(rp=>{
+    if(!rp.connected) return;
+    players[rp.id]={x:rp.x,y:rp.y,z:rp.z,yaw:rp.yaw,camYaw:rp.turretYaw,health:rp.health,alive:rp.alive,size:rp.sizeScale,invis:rp.invis};
+  });
+  broadcastToAll({t:'snapshot', players});
 }
 
 /* =========================================================
    MATCH START / LOOP
    ========================================================= */
 function setupKarts(){
-  const redColor=0xff3b4d, blueColor=0x2d8cff;
-  const lk=buildKart(local.team==='red'?redColor:blueColor);
+  // [시점 및 물리] 화면 고정 1인칭 총 모델은 쓰지 않는다 — 내 실제 카트 메쉬를 항상 visible=true로
+  // 렌더링해서 카메라가 그 뒤(본넷 너머)에서 따라가며, 차체 회전이 곧 직관적인 진행 방향 표시가 된다.
+  const lk=buildKart(local.color);
   localMesh=lk.group; localTurret=lk.turret;
-  localMesh.visible=true; // real kart body now drives visual orientation cues
-  const rk=buildKart(remote.team==='red'?redColor:blueColor);
-  remoteMesh=rk.group; remoteTurret=rk.turret;
-  scene.add(localMesh, remoteMesh);
+  localMesh.visible=true;
+  localMesh.scale.setScalar(local.sizeScale||1);
+  scene.add(localMesh);
+
+  // FFA: 접속한 모든 상대 플레이어마다 카트 메쉬를 하나씩 만든다 (remotePlayers={} 순회)
+  Object.values(remotePlayers).forEach(rp=>{
+    const rk=buildKart(rp.color);
+    rp.mesh=rk.group; rp.turret=rk.turret;
+    rp.mesh.scale.setScalar(rp.sizeScale||1);
+    scene.add(rp.mesh);
+  });
 }
 
 function startMatch(){
   if(started) return;
   started=true;
-  local.team = isHost? 'red':'blue';
-  remote.team = isHost? 'blue':'red';
+
+  // [네트워크] roster에 있는 모든 접속자(나 포함)에게 결정론적으로 같은 스폰/색을 배정한다.
+  // colorIndex 순서로 정렬 + mapSeed 기반 시드 셔플이라, host든 guest든 동일한 결과가 나온다.
+  const ids = Object.keys(roster).sort((a,b)=>(roster[a].colorIndex||0)-(roster[b].colorIndex||0));
+  const spawnPool = shuffledSpawns(mulberry32(mapSeed+9999));
+
   buildObstacles(mapSeed);
   buildPickups(mapSeed);
-  const s=pickSpawn(local.team);
-  local.x=s[0]; local.z=s[1];
-  local.yaw = local.team==='red'? Math.PI/2 : -Math.PI/2;
-  local.camYaw=local.yaw; local.camPitch=0;
-  const rs=pickSpawn(remote.team);
-  remote.x=rs[0]; remote.z=rs[1]; remote.tx=rs[0]; remote.tz=rs[1]; remote.yaw=(remote.team==='red'?Math.PI/2:-Math.PI/2); remote.tyaw=remote.yaw;
-  remote.connected=true;
+
+  remotePlayers = {};
+  ids.forEach((id,idx)=>{
+    const sp = spawnPool[idx % spawnPool.length];
+    const yaw = sp[0]<0 ? Math.PI/2 : -Math.PI/2;
+    const color = colorForIndex(roster[id].colorIndex||0);
+    if(id===myId){
+      local.color=color;
+      local.x=sp[0]; local.z=sp[1]; local.yaw=yaw;
+      local.camYaw=yaw; local.camPitch=0;
+      local.health=maxHP(); local.ammo=maxAmmoC(); local.alive=true; local.kills=0;
+    } else {
+      remotePlayers[id]={
+        id, name:(roster[id].name||'PLAYER'), color,
+        x:sp[0], y:0, z:sp[1], yaw, tx:sp[0], ty:0, tz:sp[1], tyaw:yaw, turretYaw:yaw,
+        health:maxHP(), alive:true, kills:0, connected:true, mesh:null, turret:null
+      };
+    }
+  });
 
   setupKarts();
   showLobby(false);
   showHud(true);
   refreshHint();
+  scheduleNextAirdrop(performance.now());
   AudioSys.startBgm();
   clock.getDelta();
   requestAnimationFrame(loop);
+
+  // [무기 시스템] 첫 스폰도 무기를 고르기 전까진 조작이 막힌다 (openWeaponPicker가 gamePaused를 유지시킨다)
+  openWeaponPicker(()=>{ gamePausedSet(false); });
 }
 
 function loop(){
@@ -1440,16 +2512,30 @@ function loop(){
   const dt=Math.min(clock.getDelta(),0.05);
   const now=performance.now();
 
+  // ===== [버그 수정 1] 로컬 플레이어 이동/물리/카메라/렌더링 =====
+  // Host도 게임 안에서는 그냥 플레이어 한 명이다. 아래 블록은 isHost 여부와 완전히 무관하게
+  // 매 프레임 무조건 실행되며, 이 아래에 있는 "Host 전용 서버 로직"에서 어떤 예외가 나더라도
+  // (try/catch로 격리되어 있으므로) 이 블록과 화면 렌더링에는 절대 영향을 주지 않는다.
   if(!gamePaused && !gameOver) updateLocal(dt);
   updateCamera(dt);
   updateBullets(dt);
   updateParticles(dt);
-  updateRemote(dt);
+  updateRemotePlayers(dt);
   updatePickups(dt, now);
-  sendState(now);
+  updateAirdrops(dt, now);
+  updateMines(dt, now);
   updateHUD();
-
   renderer.render(scene,camera);
+
+  // ===== Host 전용 "중앙 서버" 로직 (브로드캐스트 등) =====
+  // 렌더링이 이미 끝난 뒤에 실행하고, 네트워크 쪽 예외를 여기서 잡아 격리한다.
+  try{
+    if(isHost) hostMaybeSpawnAirdrop(now);
+    if(isHost) hostBroadcastSnapshot(now);
+    sendState(now);
+  }catch(err){
+    console.error('[network] per-frame sync failed:', err);
+  }
 }
 
 /* =========================================================
@@ -1471,8 +2557,8 @@ $('btnJoin').addEventListener('click', ()=>{
   setTimeout(()=>$('codeInput').focus(),50);
 });
 $('btnStartMatch').addEventListener('click', hostBeginMatch);
-$('btnHostBack').addEventListener('click', ()=>{ if(peer){peer.destroy(); peer=null;} conn=null; connectedGuestName=null; $('btnStartMatch').style.display='none'; showScreen('menu'); });
-$('btnJoinBack').addEventListener('click', ()=>{ if(peer){peer.destroy(); peer=null;} conn=null; $('joinWaitStatus').style.display='none'; showScreen('menu'); });
+$('btnHostBack').addEventListener('click', ()=>{ if(peer){peer.destroy(); peer=null;} hostConns={}; connectedGuests={}; roster={}; $('btnStartMatch').style.display='none'; showScreen('menu'); });
+$('btnJoinBack').addEventListener('click', ()=>{ if(peer){peer.destroy(); peer=null;} hostConn=null; $('joinStatus').classList.remove('pulse'); $('joinWaitStatus').style.display='none'; showScreen('menu'); });
 $('btnJoinConfirm').addEventListener('click', ()=>{
   const code=$('codeInput').value.trim().toUpperCase();
   if(code.length!==6){ $('joinStatus').textContent='6자리 코드를 입력하세요.'; return; }
