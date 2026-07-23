@@ -215,6 +215,11 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
 #centerMsg p{margin-top:8px; font-size:12px; letter-spacing:3px; color:#dfe8ee;}
 
 #deathOverlay{position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at center, rgba(80,0,0,0.15), rgba(10,0,0,0.92)); opacity:0; transition:opacity 1s;}
+#deathOverlay.awaken-flash{animation:awakenFlash 0.9s ease-out;}
+@keyframes awakenFlash{
+  0%{ background:radial-gradient(ellipse at center, rgba(255,207,59,0.85), rgba(10,0,0,0.92)); opacity:1; }
+  100%{ background:radial-gradient(ellipse at center, rgba(80,0,0,0.15), rgba(10,0,0,0.92)); opacity:0; }
+}
 #deathOverlay.show{opacity:1;}
 #hitFlash{
   position:absolute; inset:0; pointer-events:none;
@@ -272,6 +277,12 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
 #rearWarn{position:absolute; bottom:50%; left:50%; transform:translateX(-50%); font-size:13px; letter-spacing:3px;
   color:var(--danger); text-shadow:0 0 10px rgba(255,59,59,0.8); display:none; animation:pulse 0.5s infinite;}
 #rearWarn.show{display:block;}
+
+/* ---------- [1] 자기장 HUD ---------- */
+#zoneWarning{position:absolute; top:26%; left:50%; transform:translateX(-50%); font-size:15px; letter-spacing:3px;
+  color:var(--danger); text-shadow:0 0 12px rgba(255,59,59,0.9); display:none; animation:pulse 0.4s infinite;}
+#zoneWarning.show{display:block;}
+#zoneTimer{position:absolute; top:70px; right:18px; font-size:11px; letter-spacing:1px; color:#8a97a3; text-align:right;}
 
 /* ---------- FFA FULL SCOREBOARD (TAB) ---------- */
 #fullScoreboard{position:absolute; top:70px; left:50%; transform:translateX(-50%); width:300px; padding:14px 16px; display:none; z-index:30;}
@@ -418,6 +429,9 @@ canvas#gameCanvas{position:absolute; top:0; left:0; width:100%; height:100%; dis
     <div id="skillBar"></div>
 
     <div id="rearWarn">⚠ 후방 위험</div>
+
+    <div id="zoneWarning">⚠ 자기장 밖</div>
+    <div id="zoneTimer"></div>
   </div>
 
   <div id="weaponOverlay">
@@ -497,6 +511,8 @@ const AudioSys = (function(){
   function blink(){ tone(1200,0.08,'sine',0.09,300); setTimeout(()=>tone(1600,0.06,'sine',0.07,2200),40); }
   function hitmarker(){ tone(1500,0.045,'square',0.09,1900); }
   function spark(){ tone(220,0.05,'square',0.05,90); }
+  function throwSnd(){ tone(200,0.12,'square',0.08,90); }
+  function awaken(){ [392,523,659,880,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.22,'sawtooth',0.13,f*1.4),i*90)); noiseBurst(0.3,0.1); }
 
   const bgmNotes=[220,220,261.63,220,196,220,261.63,293.66];
   function bgmStepFn(){ tone(bgmNotes[bgmStep%bgmNotes.length], 0.2,'triangle',0.04); bgmStep++; }
@@ -504,7 +520,7 @@ const AudioSys = (function(){
   function stopBgm(){ if(bgmSched){clearInterval(bgmSched); bgmSched=null;} }
   function toggleMute(){ muted=!muted; if(muted) stopBgm(); else startBgm(); return muted; }
 
-  return {ensure, shoot, hit, death, reload, pickAugment, winSnd, loseSnd, jump, beam, blink, hitmarker, spark, startBgm, stopBgm, toggleMute, isMuted:()=>muted};
+  return {ensure, shoot, hit, death, reload, pickAugment, winSnd, loseSnd, jump, beam, blink, hitmarker, spark, throwSnd, awaken, startBgm, stopBgm, toggleMute, isMuted:()=>muted};
 })();
 
 /* =========================================================
@@ -519,9 +535,34 @@ let connectedGuests={};        // HOST ONLY: peerId -> name, drives the lobby pl
 let roster={};                 // peerId -> {name, colorIndex}, kept in sync by the host and broadcast to all guests
 let matchStartRequested=false; // guest: host has sent the start signal
 
+/* =========================================================
+   [1] 단계별 수축형 자기장 (Phased Safe Zone) — host가 유일한 권위자.
+   phaseState: 'waiting'(대기, 안 줄어듦) -> 'shrinking'(목표 지점/반경으로 보간) -> 다음 phase의 'waiting'
+   ========================================================= */
+const ZONE_PHASES = [
+  {wait:20000, shrink:14000, radiusMult:0.62, dpsPercent:0.010},
+  {wait:18000, shrink:13000, radiusMult:0.58, dpsPercent:0.025},
+  {wait:16000, shrink:12000, radiusMult:0.52, dpsPercent:0.05},
+  {wait:14000, shrink:11000, radiusMult:0.48, dpsPercent:0.09},
+  {wait:12000, shrink:10000, radiusMult:0.42, dpsPercent:0.15}, // 회복 불가 수준
+  {wait:10000, shrink:9000,  radiusMult:0.35, dpsPercent:0.22}
+];
+let zone = {
+  active:false, phase:-1, phaseState:'waiting', phaseTimer:0,
+  cx:0, cz:0, radius:0,               // 현재(보간된) 안전 구역 — startMatch에서 ARENA*1.6로 초기화
+  fromX:0, fromZ:0, fromR:0,          // 이번 페이즈 보간 시작값
+  toX:0, toZ:0, toR:0,                // 이번 페이즈 보간 목표값
+  dpsPercent:0
+};
+
+/* [2] 넉백/스턴은 local 오브젝트의 kbVX/kbVZ/stunTimer 필드로 관리(아래 local 선언부에서 초기화).
+   기존 조향/가속 로직과는 완전히 별도 채널이라 서로 간섭하지 않는다. */
+let grenades=[]; // 중력 붕괴 수류탄 투사체 목록
+
 const KEYS = {w:false,a:false,s:false,d:false,r:false,space:false};
 let pointerLocked=false;
 let gamePaused=false, gameOver=false, augmentOpen=false, started=false;
+let isCatchupPick=false; // [3] 데스스트릭 각성으로 연 증강픽인지 — finishRespawn에서 특별 연출 여부 판단
 
 const BASE = {
   maxHealth:100, maxSpeed:20, turnRate:2.2, accel:26, decel:4.5, reverseMax:9
@@ -567,7 +608,7 @@ let aug = {
   explosiveRounds:false, piercing:false, poison:false, boomerang:false, hedgehog:false,
   rearWarn:false, adrenaline:false, infiniteAmmo:false, regen:false,
   // 유틸리티
-  zeroGravity:false, wallPhase:false, kamikaze:false, heavyArmor:false
+  zeroGravity:false, wallPhase:false, kamikaze:false, heavyArmor:false, repulsorShotgun:false
 };
 // [증강 시스템] 이미 획득한 증강 id 목록 — 재등장 방지 필터링에 사용
 let ownedAugmentIds = [];
@@ -598,6 +639,10 @@ const local = {
   team:'red', color:0xff3b4d, sizeScale:1, x:-42,y:0,z:0, yaw:0, speed:0, vy:0, blinkTimer:0, gravityWell:null,
   speedBoostTimer:0, shieldTimer:0, reflectTimer:0, invisTimer:0, empTimer:0, jumpCooldown:0,
   poisonTimer:0, poisonAcc:0, poisonDps:0, poisonSourceId:null, regenAcc:0, doubleJumpArmed:false,
+  // [2] 넉백/스턴 — 값이 있으면 매 프레임 위치에 추가로 더해지고 감쇠한다(아래 updateLocal 참고)
+  kbVX:0, kbVZ:0, kbSourceId:null, stunTimer:0,
+  // [3] 데스스트릭 각성 — 누적 사망수/무킬 연속사망수를 추적해 보상을 트리거한다
+  totalDeaths:0, deathsSinceKill:0, pendingCatchup:false,
   camYaw:0, camPitch:0,
 
   weaponKey:'rifle', reloadStart:0, reloadDuration:0,
@@ -813,6 +858,118 @@ function updatePickups(dt, now){
 function scheduleNextAirdrop(now){
   nextAirdropAt = now + AIRDROP_INTERVAL_MIN + Math.random()*(AIRDROP_INTERVAL_MAX-AIRDROP_INTERVAL_MIN);
 }
+/* =========================================================
+   [1] 단계별 수축형 자기장 — host가 유일한 권위자(hostUpdateZone).
+   모든 클라이언트(host 포함)는 zone.{cx,cz,radius}를 매 프레임 보간해서 화면/데미지 판정에 쓴다.
+   ========================================================= */
+function pickNextZoneTarget(){
+  const nextIdx=zone.phase+1;
+  if(nextIdx>=ZONE_PHASES.length){ zone.toX=zone.cx; zone.toZ=zone.cz; zone.toR=zone.radius; return; }
+  const cfg=ZONE_PHASES[nextIdx];
+  const newR=zone.radius*cfg.radiusMult;
+  const maxOffset=Math.max(0, zone.radius-newR); // 새 원이 반드시 이전 원 안에 완전히 들어가도록 제한
+  const ang=Math.random()*Math.PI*2;
+  const dist=Math.random()*maxOffset; // [랜덤성] 매 페이즈 다음 중심점을 이전 안전구역 내에서 무작위로 — 중앙 캠핑 방지
+  zone.fromX=zone.cx; zone.fromZ=zone.cz; zone.fromR=zone.radius;
+  zone.toX=zone.cx+Math.cos(ang)*dist;
+  zone.toZ=zone.cz+Math.sin(ang)*dist;
+  zone.toR=newR;
+}
+function broadcastZoneState(){
+  const msg={t:'zone', phase:zone.phase, phaseState:zone.phaseState,
+    fromX:zone.fromX, fromZ:zone.fromZ, fromR:zone.fromR,
+    toX:zone.toX, toZ:zone.toZ, toR:zone.toR,
+    cx:zone.cx, cz:zone.cz, radius:zone.radius,
+    dpsPercent:zone.dpsPercent, duration:zone.duration};
+  broadcastToAll(msg);
+}
+function hostUpdateZone(now){
+  if(!started || gameOver) return;
+  if(!zone.hostInited){
+    zone.hostInited=true;
+    zone.phase=-1; zone.cx=0; zone.cz=0; zone.radius=ARENA*1.4;
+    zone.phaseState='waiting'; zone.phaseStartAt=now; zone.duration=8000; zone.dpsPercent=0;
+    pickNextZoneTarget(); // 첫 페이즈 목표도 대기 시작과 동시에 미리 예고해준다
+    zone.active=true;
+    broadcastZoneState();
+    return;
+  }
+  if(now-zone.phaseStartAt < zone.duration) return;
+  if(zone.phaseState==='waiting'){
+    if(zone.phase+1>=ZONE_PHASES.length){ zone.phaseStartAt=now; return; } // 마지막 단계는 그대로 유지
+    zone.phase++;
+    zone.phaseState='shrinking';
+    zone.phaseStartAt=now;
+    zone.duration=ZONE_PHASES[zone.phase].shrink;
+    zone.dpsPercent=ZONE_PHASES[zone.phase].dpsPercent;
+    broadcastZoneState();
+  } else { // 'shrinking' 완료 — 목표값 확정 후 다음 대기 단계로, 그 다음 목표도 바로 예고
+    zone.cx=zone.toX; zone.cz=zone.toZ; zone.radius=zone.toR;
+    zone.phaseState='waiting';
+    zone.phaseStartAt=now;
+    zone.duration = (zone.phase+1<ZONE_PHASES.length) ? ZONE_PHASES[zone.phase+1].wait : 999999999;
+    pickNextZoneTarget();
+    broadcastZoneState();
+  }
+}
+
+let zoneRingMesh=null, zoneTargetRingMesh=null;
+function ensureZoneMeshes(){
+  if(zoneRingMesh) return;
+  const ringMat=new THREE.MeshBasicMaterial({color:0x22e5e5, transparent:true, opacity:0.55, side:THREE.DoubleSide});
+  zoneRingMesh=new THREE.Mesh(new THREE.RingGeometry(1,1.4,72), ringMat);
+  zoneRingMesh.rotation.x=-Math.PI/2; zoneRingMesh.position.y=0.08;
+  scene.add(zoneRingMesh);
+  const targetMat=new THREE.MeshBasicMaterial({color:0xffcf3b, transparent:true, opacity:0.35, side:THREE.DoubleSide});
+  zoneTargetRingMesh=new THREE.Mesh(new THREE.RingGeometry(1,1.25,72), targetMat);
+  zoneTargetRingMesh.rotation.x=-Math.PI/2; zoneTargetRingMesh.position.y=0.09;
+  scene.add(zoneTargetRingMesh);
+}
+function renderZoneRing(){
+  ensureZoneMeshes();
+  const r=Math.max(1,zone.radius);
+  zoneRingMesh.geometry.dispose();
+  zoneRingMesh.geometry=new THREE.RingGeometry(Math.max(0.5,r-0.6), r, 72);
+  zoneRingMesh.position.set(zone.cx, 0.08, zone.cz);
+  const urgency=Math.min(1,(zone.dpsPercent||0)/0.15);
+  zoneRingMesh.material.color.setHex(urgency>0.6?0xff3b4d:(urgency>0.25?0xffcf3b:0x22e5e5));
+
+  const hasNext = zone.toR!==undefined && zone.phase+1<ZONE_PHASES.length;
+  zoneTargetRingMesh.visible = hasNext;
+  if(hasNext){
+    const tr=Math.max(1, zone.toR);
+    zoneTargetRingMesh.geometry.dispose();
+    zoneTargetRingMesh.geometry=new THREE.RingGeometry(Math.max(0.5,tr-0.4), tr, 72);
+    zoneTargetRingMesh.position.set(zone.toX, 0.09, zone.toZ);
+  }
+}
+function updateZoneHud(now){
+  const warnEl=$('zoneWarning'), timerEl=$('zoneTimer');
+  if(!zone.active){ if(warnEl) warnEl.classList.remove('show'); if(timerEl) timerEl.textContent=''; return; }
+  if(local.alive){
+    const dist=Math.hypot(local.x-zone.cx, local.z-zone.cz);
+    if(dist>zone.radius && warnEl){
+      warnEl.classList.add('show');
+      warnEl.textContent = `⚠ 자기장 밖 — 초당 최대체력 ${Math.round(zone.dpsPercent*100)}% 피해`;
+    } else if(warnEl) warnEl.classList.remove('show');
+  }
+  if(timerEl){
+    const remain=Math.max(0, Math.ceil((zone.duration-(now-zone.phaseStartAt))/1000));
+    timerEl.textContent = zone.phaseState==='waiting' ? `다음 자기장 수축까지 ${remain}s` : `자기장 수축 중... ${remain}s`;
+  }
+}
+function updateZoneVisual(now){
+  if(!zone.active) return;
+  if(zone.phaseState==='shrinking'){
+    const t=Math.min(1, (now-zone.phaseStartAt)/zone.duration);
+    zone.cx=zone.fromX+(zone.toX-zone.fromX)*t;
+    zone.cz=zone.fromZ+(zone.toZ-zone.fromZ)*t;
+    zone.radius=zone.fromR+(zone.toR-zone.fromR)*t;
+  }
+  renderZoneRing();
+  updateZoneHud(now);
+}
+
 function hostMaybeSpawnAirdrop(now){
   if(!isHost || !started || gameOver) return;
   if(now < nextAirdropAt) return;
@@ -921,7 +1078,11 @@ const AUGMENT_POOL = [
   {id:'wallphase', type:'utility', icon:'👤', name:'벽 통과', desc:'더 이상 장애물과 충돌하지 않고 그대로 통과한다.', apply:()=>{aug.wallPhase=true;}},
   {id:'randomgun', type:'utility', icon:'🎲', name:'랜덤 총기', desc:'즉시 무작위 무기로 교체된다.', apply:applyRandomGun},
   {id:'kamikaze', type:'utility', icon:'💥', name:'카미카제', desc:'사망 시 주변 적에게 폭발 피해를 남긴다.', apply:()=>{aug.kamikaze=true;}},
-  {id:'heavyarmor', type:'utility', icon:'🪖', name:'중장갑', desc:'피격 카메라 흔들림이 거의 없고 받는 데미지가 20% 감소한다.', apply:()=>{aug.heavyArmor=true;}}
+  {id:'heavyarmor', type:'utility', icon:'🪖', name:'중장갑', desc:'피격 카메라 흔들림이 거의 없고 받는 데미지가 20% 감소한다.', apply:()=>{aug.heavyArmor=true;}},
+
+  // ---------- 넉백/지형 활용 특화 신규 증강 ----------
+  {id:'knockgrenade', type:'active', icon:'🌌', name:'중력 붕괴 수류탄', desc:'투척 후 폭발 — 데미지는 낮지만 반경 내 적을 맵 절반 가까이 날려버린다. 발밑에 던지면 이동기로도 쓸 수 있다.', cooldown:30, activate:()=>activateKnockGrenade()},
+  {id:'repulsorshotgun', type:'passive', icon:'💨', name:'리펄서 샷건', desc:'피격시킨 적을 강하게 밀쳐낸다. 밀려난 적이 벽/장애물에 부딪히면 추가 데미지와 함께 잠시 스턴에 빠진다.', apply:()=>{aug.repulsorShotgun=true;}}
 ];
 
 /* =========================================================
@@ -1102,9 +1263,10 @@ function circleCollide(x,z,radius,y){
 
 function updateLocal(dt){
   if(!local.alive) return;
-  const empActive = local.empTimer>0; // [액티브] EMP에 맞으면 잠시 조작 불능
-  const steer=empActive?0:((KEYS.a?1:0)-(KEYS.d?1:0));
-  const throttle=empActive?0:((KEYS.w?1:0)-(KEYS.s?1:0));
+  // [2] EMP에 맞았거나, 리펄서 샷건에 밀려나 벽에 부딪혀 스턴 상태면 조작 불능
+  const controlsLocked = local.empTimer>0 || local.stunTimer>0;
+  const steer=controlsLocked?0:((KEYS.a?1:0)-(KEYS.d?1:0));
+  const throttle=controlsLocked?0:((KEYS.w?1:0)-(KEYS.s?1:0));
   const turnFactor=Math.min(1, Math.abs(local.speed)/4+0.35);
   local.yaw += steer*BASE.turnRate*dt*turnFactor*(local.speed<0?-1:1);
 
@@ -1150,8 +1312,28 @@ function updateLocal(dt){
     }
   }
 
+  // [2] 넉백 이동 — 조향/가속과 완전히 별개인 채널. 매 프레임 더해주고 공기저항처럼 감쇠시킨다.
+  if(Math.abs(local.kbVX)>0.05 || Math.abs(local.kbVZ)>0.05){
+    const px=local.x, pz=local.z;
+    local.x += local.kbVX*dt;
+    local.z += local.kbVZ*dt;
+    const kbc=circleCollide(local.x, local.z, 1.1, local.y);
+    const blocked = (Math.abs(kbc.x-local.x)>0.001 || Math.abs(kbc.z-local.z)>0.001);
+    local.x=kbc.x; local.z=kbc.z;
+    // [리펄서 샷건] 넉백에 밀려나다가 벽/장애물에 부딪히면 추가 데미지 + 짧은 스턴
+    const speed=Math.hypot(local.kbVX, local.kbVZ);
+    if(blocked && speed>10 && local.stunTimer<=0){
+      local.stunTimer=1.2;
+      applyDamageToLocal(14, local.kbSourceId, true);
+      cameraShake(0.14,0.26);
+      AudioSys.hit();
+    }
+    const decay=Math.pow(0.06, dt); // 초당 약 94% 감쇠 — 짧고 굵게 날아가다 멈춘다
+    local.kbVX*=decay; local.kbVZ*=decay;
+  }
+
   // [밸런스] jump / gravity — 스페이스바 점프에 1초 쿨타임 적용 (토끼뜀 방지)
-  if(KEYS.space && local.y<=0 && local.vy<=0 && local.jumpCooldown<=0){
+  if(!controlsLocked && KEYS.space && local.y<=0 && local.vy<=0 && local.jumpCooldown<=0){
     local.vy=JUMP_SPEED;
     local.jumpCooldown=JUMP_COOLDOWN;
     AudioSys.jump();
@@ -1191,11 +1373,26 @@ function updateLocal(dt){
     if(local.regenAcc>=1){ local.regenAcc-=1; local.health=Math.min(maxHP(), local.health+2); }
   }
 
+  // [1] 자기장 — 안전 구역 밖(레드존)이면 페이즈별 dpsPercent만큼 초당 지속 데미지(쉴드/중장갑 무시)
+  if(zone.active && local.alive){
+    const distToZone=Math.hypot(local.x-zone.cx, local.z-zone.cz);
+    if(distToZone > zone.radius){
+      local.zoneAcc = (local.zoneAcc||0) + dt;
+      if(local.zoneAcc >= 0.5){
+        local.zoneAcc -= 0.5;
+        applyDamageToLocal(Math.max(1, Math.round(maxHP()*zone.dpsPercent*0.5)), null, true);
+      }
+    } else {
+      local.zoneAcc = 0;
+    }
+  }
+
   if(local.speedBoostTimer>0) local.speedBoostTimer=Math.max(0,local.speedBoostTimer-dt);
   if(local.shieldTimer>0) local.shieldTimer=Math.max(0,local.shieldTimer-dt);
   if(local.reflectTimer>0) local.reflectTimer=Math.max(0,local.reflectTimer-dt);
   if(local.invisTimer>0) local.invisTimer=Math.max(0,local.invisTimer-dt);
   if(local.empTimer>0) local.empTimer=Math.max(0,local.empTimer-dt);
+  if(local.stunTimer>0) local.stunTimer=Math.max(0,local.stunTimer-dt);
   if(local.fireCooldown>0) local.fireCooldown-=dt;
   // [조작] 보유한 액티브 스킬들의 쿨타임을 매 프레임 갱신
   activeSkills.forEach(s=>{ if(s.cd>0) s.cd=Math.max(0,s.cd-dt); });
@@ -1267,7 +1464,7 @@ function findHomingTarget(dir){
 }
 
 function tryShoot(){
-  if(!local.alive || local.reloading || local.fireCooldown>0 || weaponPickerOpen || local.empTimer>0) return;
+  if(!local.alive || local.reloading || local.fireCooldown>0 || weaponPickerOpen || local.empTimer>0 || local.stunTimer>0) return;
   if(aug.infiniteAmmo) local.ammo=maxAmmoC(); // [패시브] 무한탄창 — 발사 직전 항상 가득 채운다
   if(local.ammo<=0){ tryReload(); return; }
 
@@ -1320,7 +1517,7 @@ function tryShoot(){
    [조작] 액티브 스킬 — 배정된 키를 누르면 쿨타임 확인 후 발동
    ========================================================= */
 function tryActivateSkillByKey(key){
-  if(!local.alive || gamePaused || gameOver || augmentOpen || weaponPickerOpen || !pointerLocked || local.empTimer>0) return;
+  if(!local.alive || gamePaused || gameOver || augmentOpen || weaponPickerOpen || !pointerLocked || local.empTimer>0 || local.stunTimer>0) return;
   const skill = activeSkills.find(s=>s.key===key);
   if(!skill || skill.cd>0) return;
   skill.cd = skill.cdMax;
@@ -1641,6 +1838,10 @@ function updateBullets(dt){
           spawnSparks(b.mesh.position.clone(), 0xffffff);
           triggerHitmarker();
           if(aug.vampire) local.health=Math.min(maxHP(), local.health+Math.max(1,Math.round(b.dmg*0.25))); // [패시브] 뱀파이어
+          // [패시브] 리펄서 샷건 — 피격자 본인에게 직접 넉백을 지시(고슴도치/EMP와 동일한 패턴)
+          if(aug.repulsorShotgun){
+            sendToPlayer(rp.id, {t:'knockback', dx:rp.x-local.x, dz:rp.z-local.z, force:34, vy:8, ownerId:myId});
+          }
           if(!b.pierce) hit=true;
           break;
         }
@@ -1685,6 +1886,66 @@ function updateMines(dt, now){
     }
   }
 }
+
+/* =========================================================
+   [2] 중력 붕괴 수류탄 — 투척 후 물리 궤적을 그리다 지면/장애물에 닿거나 퓨즈가 다 되면 터진다.
+   폭발 자체는 각 클라이언트가 "던질 때 받은 초기속도"로 동일하게 물리 시뮬레이션해서 독립적으로 계산한다
+   (총알/지뢰와 같은 패턴) — 그래서 폭발 시점에 추가 네트워크 왕복이 필요 없다.
+   ========================================================= */
+function activateKnockGrenade(){
+  const dir=aimDirection();
+  const speed=26;
+  const vel=dir.clone().multiplyScalar(speed);
+  vel.y=Math.max(vel.y, 3.5); // 발밑/아래를 조준해도 최소한의 포물선을 그리도록 보정 — 이동기로도 쓸 수 있게
+  const origin=camera.position.clone().addScaledVector(dir,0.6);
+  const id='gn'+Math.floor(Math.random()*1e9);
+  spawnGrenadeLocal(id, origin, vel, myId);
+  const msg={t:'grenade', id, x:origin.x, y:origin.y, z:origin.z, vx:vel.x, vy:vel.y, vz:vel.z, ownerId:myId};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+  AudioSys.throwSnd();
+}
+function spawnGrenadeLocal(id,pos,vel,ownerId){
+  if(grenades.find(g=>g.id===id)) return;
+  const mat=new THREE.MeshStandardMaterial({color:0x120a1c, emissive:0x8844ff, emissiveIntensity:2.0, metalness:0.5, roughness:0.3});
+  const mesh=new THREE.Mesh(new THREE.SphereGeometry(0.32,10,10), mat);
+  mesh.position.copy(pos);
+  scene.add(mesh);
+  const light=new THREE.PointLight(0x8844ff,1.4,6); mesh.add(light);
+  grenades.push({id, mesh, pos:pos.clone(), vel:vel.clone(), fuse:1.7, ownerId, exploded:false});
+}
+function updateGrenades(dt){
+  for(let i=grenades.length-1;i>=0;i--){
+    const g=grenades[i];
+    g.vel.y += GRAVITY*dt;
+    g.pos.addScaledVector(g.vel, dt);
+    // 장애물 옆면에 살짝 튕기는 정도만 처리(관통 방지), 바닥/퓨즈 만료가 주 폭발 트리거
+    const cc=circleCollide(g.pos.x, g.pos.z, 0.3, g.pos.y);
+    if(cc.x!==g.pos.x || cc.z!==g.pos.z){ g.pos.x=cc.x; g.pos.z=cc.z; g.vel.x*=-0.3; g.vel.z*=-0.3; }
+    g.mesh.position.copy(g.pos);
+    g.mesh.rotation.x+=dt*6; g.mesh.rotation.y+=dt*5;
+    g.fuse-=dt;
+    if(g.pos.y<=0.32 || g.fuse<=0){
+      handleGrenadeExplosion(g);
+      scene.remove(g.mesh);
+      grenades.splice(i,1);
+    }
+  }
+}
+function handleGrenadeExplosion(g){
+  const radius=9, dmg=8, knockForce=95, knockVy=15; // 데미지는 낮게, 넉백은 극단적으로
+  spawnSparks(g.pos.clone(), 0x8844ff);
+  cameraShake(0.16,0.3);
+  if(!local.alive) return;
+  const dx=local.x-g.pos.x, dz=local.z-g.pos.z;
+  const dist=Math.hypot(dx,dz);
+  if(dist<radius){
+    const falloff=1-dist/radius;
+    applyDamageToLocal(Math.max(1,Math.round(dmg*falloff)), g.ownerId);
+    // 폭심 바로 위(자기 발밑에 던졌을 때)라 방향이 애매하면 항상 위로 강하게 띄운다
+    applyKnockback(dx||(Math.random()*2-1), dz||(Math.random()*2-1), knockForce*Math.max(0.4,falloff), knockVy, g.ownerId);
+  }
+}
+
 function spawnGravWellVisual(x,z,duration){
   const mat=new THREE.MeshBasicMaterial({color:0x8844ff, transparent:true, opacity:0.5});
   const mesh=new THREE.Mesh(new THREE.SphereGeometry(0.9,12,12), mat);
@@ -1702,14 +1963,14 @@ function spawnGravWellVisual(x,z,duration){
   anim();
 }
 
-function applyDamageToLocal(dmg, killerId){
+function applyDamageToLocal(dmg, killerId, unblockable){
   if(!local.alive) return;
-  if(local.shieldTimer>0){
+  if(!unblockable && local.shieldTimer>0){
     AudioSys.blink();
     return;
   }
   // [액티브] 반사실드 — 데미지를 무효화하고, 공격자의 마지막 위치를 향해 반격탄을 날린다
-  if(local.reflectTimer>0){
+  if(!unblockable && local.reflectTimer>0){
     AudioSys.blink(); cameraShake(0.08,0.16);
     const rp = remotePlayers[killerId];
     if(rp && rp.alive){
@@ -1721,12 +1982,22 @@ function applyDamageToLocal(dmg, killerId){
     }
     return;
   }
-  if(aug.heavyArmor) dmg*=0.8; // [유틸리티] 중장갑 — 받는 데미지 20% 감소
+  if(aug.heavyArmor && !unblockable) dmg*=0.8; // [유틸리티] 중장갑 — 받는 데미지 20% 감소(자기장은 예외)
   local.health -= dmg;
   AudioSys.hit();
   triggerHitFlash();
   cameraShake(aug.heavyArmor?0.04:0.16, aug.heavyArmor?0.1:0.32); // [유틸리티] 중장갑 — 흔들림 거의 없음
   if(local.health<=0){ local.health=0; handleLocalDeath(killerId); }
+}
+// [2] 넉백 — 어떤 스킬이든(수류탄/리펄서 샷건) 이 함수 하나로 처리한다.
+// dx,dz: 밀려나는 방향(정규화 불필요, 내부에서 정규화), force: 초기 속도, vy: 위로 띄우는 힘(옵션)
+function applyKnockback(dx, dz, force, vy, sourceId){
+  if(!local.alive) return;
+  const len=Math.hypot(dx,dz)||1;
+  local.kbVX += (dx/len)*force;
+  local.kbVZ += (dz/len)*force;
+  if(vy) local.vy = Math.max(local.vy, vy);
+  local.kbSourceId = sourceId||local.kbSourceId||null;
 }
 function triggerHitFlash(){
   const el=$('hitFlash');
@@ -1744,6 +2015,7 @@ function handleLocalDeath(killerId){
   reportKill(killerId);
   AudioSys.death();
   if(aug.kamikaze) triggerKamikaze(); // [유틸리티] 카미카제 — 사망 시 주변에 폭발 피해
+  checkDeathstreak(); // [3] 데스스트릭 각성 — 여기서 local.pendingCatchup이 세팅될 수 있다
   showCenterMsg(true,'ELIMINATED','무기 선택 중...');
   $('deathOverlay').classList.add('show');
   gamePausedSet(true);
@@ -1751,8 +2023,27 @@ function handleLocalDeath(killerId){
 
   setTimeout(()=>{
     if(gameOver) return;
-    openWeaponPicker(()=>{ openAugmentPicker('death'); });
+    openWeaponPicker(()=>{
+      const catchup=local.pendingCatchup;
+      local.pendingCatchup=false;
+      openAugmentPicker('death', catchup?2:1);
+    });
   }, 1100);
+}
+/* =========================================================
+   [3] 데스스트릭(Deathstreak) 각성 — 초보자 구제 기믹
+   조건: 누적 사망 5명단위(5, 10, 15...) 마다 1번, 또는 1킬도 못하고 5연속 사망할 때마다 1번 트리거된다.
+   기존 킬/스코어 시스템(hostRegisterKill / applyScores)에 딱 한 줄씩만 얹어서 deathsSinceKill을 리셋하고,
+   그 외에는 local 오브젝트 안의 독립적인 카운터로만 관리해서 기존 상태와 절대 얽히지 않는다.
+   ========================================================= */
+function checkDeathstreak(){
+  local.totalDeaths++;
+  local.deathsSinceKill++;
+  const trigger = (local.totalDeaths % 5 === 0) || (local.deathsSinceKill >= 5);
+  if(trigger){
+    local.deathsSinceKill=0;
+    local.pendingCatchup=true;
+  }
 }
 function triggerKamikaze(){
   const msg={t:'kamikaze', x:local.x, y:local.y, z:local.z, dmg:40, radius:6, ownerId:myId};
@@ -1769,6 +2060,7 @@ function finishRespawn(){
   local.speed=0;
   local.y=0; local.vy=0;
   local.speedBoostTimer=0; local.shieldTimer=0; local.reflectTimer=0; local.invisTimer=0; local.empTimer=0;
+  local.stunTimer=0; local.kbVX=0; local.kbVZ=0; local.zoneAcc=0;
   local.health=maxHP();
   local.ammo=maxAmmoC();
   local.reloading=false;
@@ -1777,6 +2069,30 @@ function finishRespawn(){
   $('deathOverlay').classList.remove('show');
   gamePausedSet(false);
   broadcastRespawn();
+  if(isCatchupPick){ isCatchupPick=false; triggerAwakenEffect(); } // [3] 데스스트릭 각성 특별 연출
+}
+// [3] 데스스트릭 각성 연출 — 본인 화면엔 골드 플래시+사운드, 다른 클라이언트에게도 부활 위치에
+// 오라 파티클이 터지는 걸 보여줘서 "이 사람 각성했다"가 한눈에 보이게 한다.
+function triggerAwakenEffect(){
+  AudioSys.awaken();
+  cameraShake(0.2,0.4);
+  $('deathOverlay').classList.add('awaken-flash');
+  setTimeout(()=>$('deathOverlay').classList.remove('awaken-flash'), 900);
+  spawnAwakenBurst(local.x, local.y, local.z);
+  const msg={t:'awaken', x:local.x, y:local.y, z:local.z};
+  if(isHost) broadcastToAll(msg); else if(hostConn && hostConn.open) hostConn.send(msg);
+}
+function spawnAwakenBurst(x,y,z){
+  for(let i=0;i<18;i++){
+    const geo=new THREE.SphereGeometry(0.16,6,6);
+    const mat=new THREE.MeshBasicMaterial({color:0xffcf3b, transparent:true, opacity:0.9});
+    const m=new THREE.Mesh(geo,mat);
+    m.position.set(x,(y||0)+1.0,z);
+    scene.add(m);
+    const ang=Math.random()*Math.PI*2, up=1.5+Math.random()*2.5, out=2+Math.random()*3;
+    const vel=new THREE.Vector3(Math.cos(ang)*out, up, Math.sin(ang)*out);
+    particles.push({mesh:m, vel, life:0.9, maxLife:0.9, noGravity:false});
+  }
 }
 // [버그 수정 1] 부활 시 '상태(alive/invis 등)'와 '새 좌표'를 주기적인 50ms 스로틀(sendState)에 맡기지 않고
 // 즉시, 명시적으로 한 번 더 브로드캐스트한다. 수신부는 applyHardSync로 보간 목표뿐 아니라 현재 위치까지
@@ -1803,6 +2119,7 @@ function reportKill(killerId){
 function hostRegisterKill(killerId){
   if(killerId===myId){
     local.kills++;
+    local.deathsSinceKill=0; // [3] 킬을 냈으니 "무킬 연속사망" 카운터 초기화
     checkGameOverAll();
     if(!gameOver && local.kills%3===0 && local.kills<10) openAugmentPicker('killstreak');
   } else if(remotePlayers[killerId]){
@@ -1825,6 +2142,7 @@ function applyScores(scores){
     if(id===myId) return;
     if(remotePlayers[id]) remotePlayers[id].kills=scores[id];
   });
+  if(local.kills>prevKills) local.deathsSinceKill=0; // [3] 내 킬 수가 늘었다 = 내가 킬을 냈다
   checkGameOverAll();
   if(!gameOver && local.kills>prevKills && local.kills%3===0 && local.kills<10) openAugmentPicker('killstreak');
 }
@@ -1902,14 +2220,22 @@ function setCrosshairShape(shape){
   el.classList.add('shape-'+shape);
 }
 
-function openAugmentPicker(reason){
+function openAugmentPicker(reason, pickCount){
   if(augmentOpen || gameOver) return;
+  pickCount = pickCount || 1;
   augmentOpen=true;
+  isCatchupPick = pickCount>1; // [3] finishRespawn에서 특별 연출을 틀지 여부 판단용
   gamePausedSet(true);
   if(document.pointerLockElement) document.exitPointerLock();
-  $('augTitle').textContent = reason==='death'
-    ? 'ELIMINATED — 증강을 선택하고 부활하세요'
-    : 'KILLSTREAK BONUS — 증강 선택';
+  renderAugmentPickerCards(reason, pickCount);
+  $('augmentOverlay').classList.add('show');
+}
+// [증강 시스템] 카드 3장을 그려서 보여주고, 고를 때마다 remaining을 줄여 다시 그린다(pickCount>1 지원)
+function renderAugmentPickerCards(reason, remaining){
+  const baseTitle = reason==='death' ? 'ELIMINATED — 증강을 선택하고 부활하세요' : 'KILLSTREAK BONUS — 증강 선택';
+  $('augTitle').textContent = isCatchupPick
+    ? `🌟 데스스트릭 각성! 증강 2개를 선택하세요 (남은 선택: ${remaining})`
+    : baseTitle;
 
   // [중요] 이미 보유한 증강(ownedAugmentIds)은 후보 풀에서 완전히 제외한다 — 중복 등장 방지
   const pool = AUGMENT_POOL.filter(a=>!ownedAugmentIds.includes(a.id));
@@ -1919,7 +2245,7 @@ function openAugmentPicker(reason){
 
   const wrap=$('augCards'); wrap.innerHTML='';
   if(picks.length===0){
-    // 30가지를 모두 보유한 극단적인 경우 — 더 줄 게 없으니 그냥 진행시킨다
+    // 풀을 모두 소진한 극단적인 경우 — 더 줄 게 없으니 그냥 진행시킨다
     augmentOpen=false;
     $('augmentOverlay').classList.remove('show');
     if(reason==='death') finishRespawn(); else gamePausedSet(false);
@@ -1935,6 +2261,11 @@ function openAugmentPicker(reason){
       AudioSys.pickAugment();
       acquireAugment(card);
       local.health=Math.min(local.health, maxHP());
+      const left=remaining-1;
+      if(left>0){
+        renderAugmentPickerCards(reason, left); // [3] 아직 더 골라야 하면 오버레이는 유지한 채 다시 그린다
+        return;
+      }
       augmentOpen=false;
       $('augmentOverlay').classList.remove('show');
       if(reason==='death') finishRespawn();
@@ -1942,7 +2273,6 @@ function openAugmentPicker(reason){
     });
     wrap.appendChild(el);
   });
-  $('augmentOverlay').classList.add('show');
 }
 // [증강 시스템] 실제 획득 처리 — id를 보유 목록에 넣어 재등장을 막고, 액티브면 남는 키를 순서대로 배정한다
 function acquireAugment(card){
@@ -2403,6 +2733,31 @@ function handlePeerMessage(data, fromId){
       spawnGravWellVisual(data.x, data.z, data.duration);
       if(isHost) relayToOthers(fromId, data);
       break;
+    // [1] 자기장 — host가 유일한 권위자. 게스트는 그대로 받아 적용만 한다(상대 릴레이 불필요, host가 전원에 직접 브로드캐스트)
+    case 'zone':
+      zone.phase=data.phase; zone.phaseState=data.phaseState;
+      zone.fromX=data.fromX; zone.fromZ=data.fromZ; zone.fromR=data.fromR;
+      zone.toX=data.toX; zone.toZ=data.toZ; zone.toR=data.toR;
+      zone.cx=data.cx; zone.cz=data.cz; zone.radius=data.radius;
+      zone.dpsPercent=data.dpsPercent; zone.duration=data.duration;
+      // host의 performance.now()는 이 기기와 기준시가 다르므로 절대값을 믿지 않고, 수신 시점을 기준으로 삼는다
+      zone.phaseStartAt=performance.now();
+      zone.active=true;
+      break;
+    // [2] 중력 붕괴 수류탄 — 초기 속도만 동기화, 폭발/넉백은 각자 동일한 물리로 독립 계산(총알/지뢰와 같은 패턴)
+    case 'grenade':
+      spawnGrenadeLocal(data.id, new THREE.Vector3(data.x,data.y,data.z), new THREE.Vector3(data.vx,data.vy,data.vz), data.ownerId);
+      if(isHost) relayToOthers(fromId, data);
+      break;
+    // [2] 리펄서 샷건 — 명중을 감지한 공격자가 피격자 본인에게 직접 넉백을 지시(고슴도치/EMP와 같은 패턴)
+    case 'knockback':
+      applyKnockback(data.dx, data.dz, data.force, data.vy, data.ownerId);
+      break;
+    // [3] 데스스트릭 각성 — 다른 플레이어 화면에도 부활 지점에 골드 오라 이펙트를 보여준다
+    case 'awaken':
+      spawnAwakenBurst(data.x, data.y, data.z);
+      if(isHost) relayToOthers(fromId, data);
+      break;
     // [유틸리티] 카미카제 — 사망 지점 폭발, 전원이 각자 거리 기반으로 자기 피해를 계산
     case 'kamikaze':
       spawnSparks(new THREE.Vector3(data.x,(data.y||0)+0.5,data.z), 0xffaa33);
@@ -2467,6 +2822,10 @@ function startMatch(){
   if(started) return;
   started=true;
 
+  // [1] 자기장 상태 초기화 — host는 hostUpdateZone에서 첫 프레임에 lazily 초기화한다(zone.hostInited=false)
+  zone.active=false; zone.hostInited=false; zone.phase=-1; zone.phaseState='waiting';
+  grenades.forEach(g=>scene.remove(g.mesh)); grenades=[];
+
   // [네트워크] roster에 있는 모든 접속자(나 포함)에게 결정론적으로 같은 스폰/색을 배정한다.
   // colorIndex 순서로 정렬 + mapSeed 기반 시드 셔플이라, host든 guest든 동일한 결과가 나온다.
   const ids = Object.keys(roster).sort((a,b)=>(roster[a].colorIndex||0)-(roster[b].colorIndex||0));
@@ -2524,6 +2883,8 @@ function loop(){
   updatePickups(dt, now);
   updateAirdrops(dt, now);
   updateMines(dt, now);
+  updateGrenades(dt);
+  updateZoneVisual(now);
   updateHUD();
   renderer.render(scene,camera);
 
@@ -2532,6 +2893,7 @@ function loop(){
   try{
     if(isHost) hostMaybeSpawnAirdrop(now);
     if(isHost) hostBroadcastSnapshot(now);
+    if(isHost) hostUpdateZone(now);
     sendState(now);
   }catch(err){
     console.error('[network] per-frame sync failed:', err);
